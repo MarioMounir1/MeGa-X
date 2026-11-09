@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { loadMegaXConfig } from './config/configLoader';
 import { OrchestratorEngine } from './orchestrator/orchestratorEngine';
+import { FcmDispatcher } from './relay/fcmDispatcher';
 import { MobileRelayServer } from './relay/mobileRelayServer';
 import {
   AntiGravityAgentAdapter,
@@ -19,6 +20,7 @@ export * from './agents/agentRegistry';
 export * from './agents/liveProviders';
 export * from './orchestrator/orchestratorEngine';
 export * from './relay/mobileRelayServer';
+export * from './relay/fcmDispatcher';
 
 export function createLiveAgentRegistry(): AgentRegistry {
   const registry = new AgentRegistry();
@@ -66,15 +68,20 @@ export async function startDaemonRelayServer(
 ): Promise<{
   engine: OrchestratorEngine;
   relay: MobileRelayServer;
+  fcm: FcmDispatcher;
   port: number;
 }> {
   const engine = bootstrapDaemon(configPath);
-  const relay = new MobileRelayServer(engine);
+  const fcm = new FcmDispatcher({ logToConsole: true });
+  const relay = new MobileRelayServer(engine, fcm.createSender());
   const boundPort = await relay.start(port, '0.0.0.0');
   console.log(
-    `📡 Mobile Relay Server listening on ws://0.0.0.0:${boundPort}/ws`
+    `📡 Mobile Steering Wheel UI : http://localhost:${boundPort}`
   );
-  return { engine, relay, port: boundPort };
+  console.log(
+    `📡 WebSocket Relay Endpoint : ws://0.0.0.0:${boundPort}/ws`
+  );
+  return { engine, relay, fcm, port: boundPort };
 }
 
 if (require.main === module) {

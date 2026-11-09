@@ -188,6 +188,12 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(MobileRelayServer.renderWebSteeringWheelHtml());
+      return;
+    }
+
     if (req.method === 'GET' && req.url === '/api/status') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
@@ -405,6 +411,83 @@ export class MobileRelayServer {
     }
 
     return payload.toString('utf-8');
+  }
+
+  /**
+   * Built-in Mobile/Web Steering Wheel Dashboard served at GET /
+   */
+  public static renderWebSteeringWheelHtml(): string {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeGa X • Mobile Steering Wheel</title>
+  <style>
+    :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --accent: #58a6ff; --green: #3fb950; --red: #f85149; --text: #c9d1d9; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 16px; display: flex; flex-direction: column; height: 100vh; gap: 12px; }
+    header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); }
+    .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #21262d; color: var(--accent); }
+    #approval-card { display: none; background: #3d1a1a; border: 1px solid var(--red); padding: 12px; border-radius: 8px; }
+    #terminal { flex: 1; background: #010409; border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-y: auto; font-family: monospace; font-size: 13px; white-space: pre-wrap; }
+    .prompt-bar { display: flex; gap: 8px; }
+    input { flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 6px; }
+    button { background: var(--accent); color: #000; font-weight: 600; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; }
+    button.danger { background: var(--red); color: #fff; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>🚀 MeGa X • Mobile Steering Wheel</strong>
+    <span class="badge" id="state-badge">CONNECTING...</span>
+  </header>
+  <div id="approval-card">
+    <div id="approval-text" style="margin-bottom:8px;font-weight:600;"></div>
+    <button onclick="sendDecision(true)">APPROVE</button>
+    <button class="danger" onclick="sendDecision(false)">REJECT & ROLLBACK</button>
+  </div>
+  <div id="terminal">Waiting for live Daemon telemetry...\\n</div>
+  <div class="prompt-bar">
+    <input id="prompt-input" placeholder="Enter high-level feature prompt for MeGa X..." />
+    <button onclick="submitPrompt()">Dispatch</button>
+  </div>
+  <script>
+    const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+    const term = document.getElementById('terminal');
+    const badge = document.getElementById('state-badge');
+    let pendingApproval = null;
+    ws.onopen = () => { badge.textContent = 'IDLE (CONNECTED)'; };
+    ws.onclose = () => { badge.textContent = 'DISCONNECTED'; };
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'TERMINAL_STREAM') {
+        term.textContent += msg.payload.data;
+        term.scrollTop = term.scrollHeight;
+      } else if (msg.type === 'STATE_CHANGE') {
+        badge.textContent = msg.payload.state;
+        term.textContent += '[STATE -> ' + msg.payload.state + '] ' + msg.payload.message + '\\n';
+      } else if (msg.type === 'APPROVAL_REQUIRED') {
+        pendingApproval = msg.payload;
+        document.getElementById('approval-text').textContent = '⚠️ ' + msg.payload.trigger + ': ' + msg.payload.summary;
+        document.getElementById('approval-card').style.display = 'block';
+      }
+    };
+    function submitPrompt() {
+      const input = document.getElementById('prompt-input');
+      if (!input.value.trim()) return;
+      ws.send(JSON.stringify({ type: 'PROMPT_SUBMIT', taskId: 'task_' + Date.now(), prompt: input.value.trim() }));
+      input.value = '';
+    }
+    function sendDecision(approved) {
+      if (!pendingApproval) return;
+      ws.send(JSON.stringify({ type: 'APPROVAL_DECISION', payload: { approvalId: pendingApproval.approvalId, taskId: pendingApproval.taskId, approved } }));
+      document.getElementById('approval-card').style.display = 'none';
+      pendingApproval = null;
+    }
+  </script>
+</body>
+</html>`;
   }
 }
 
