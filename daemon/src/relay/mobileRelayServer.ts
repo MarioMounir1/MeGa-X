@@ -62,6 +62,7 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 export class MobileRelayServer {
   private readonly engine: OrchestratorEngine;
   private readonly fcmSender?: FcmPushSender;
+  private readonly relaySecretToken?: string;
   private server?: http.Server;
   private readonly clients = new Set<Duplex>();
   private readonly pendingApprovals = new Map<
@@ -69,9 +70,14 @@ export class MobileRelayServer {
     (decision: ApprovalDecisionPayload) => void
   >();
 
-  constructor(engine: OrchestratorEngine, fcmSender?: FcmPushSender) {
+  constructor(
+    engine: OrchestratorEngine,
+    fcmSender?: FcmPushSender,
+    relaySecretToken = process.env.MEGAX_RELAY_TOKEN
+  ) {
     this.engine = engine;
     this.fcmSender = fcmSender;
+    this.relaySecretToken = relaySecretToken;
 
     // Wire engine telemetry and security gate into the relay
     this.engine.getVerificationRunner().setStreamListener((evt) => {
@@ -181,13 +187,43 @@ export class MobileRelayServer {
     }
   }
 
+  private isAuthorizedRequest(req: http.IncomingMessage): boolean {
+    if (!this.relaySecretToken) {
+      return true;
+    }
+
+    const authHeader = req.headers['authorization'];
+    let providedToken: string | undefined;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      providedToken = authHeader.slice('Bearer '.length).trim();
+    } else if (req.url) {
+      const parsedUrl = new URL(req.url, 'http://localhost');
+      providedToken = parsedUrl.searchParams.get('token') ?? undefined;
+    }
+
+    if (!providedToken) {
+      return false;
+    }
+
+    const expectedBuf = Buffer.from(this.relaySecretToken, 'utf-8');
+    const actualBuf = Buffer.from(providedToken, 'utf-8');
+    if (expectedBuf.length !== actualBuf.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(expectedBuf, actualBuf);
+  }
+
   private handleHttpRequest(
     req: http.IncomingMessage,
     res: http.ServerResponse
   ): void {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization'
+    );
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -195,13 +231,25 @@ export class MobileRelayServer {
       return;
     }
 
-    if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
+    const cleanPath = req.url ? req.url.split('?')[0] : '/';
+
+    if (req.method === 'GET' && (cleanPath === '/' || cleanPath === '/index.html')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(MobileRelayServer.renderWebSteeringWheelHtml());
       return;
     }
 
-    if (req.method === 'GET' && req.url === '/api/status') {
+    if (!this.isAuthorizedRequest(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          error: 'Unauthorized: Valid MeGa X relay token required.',
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/status') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({
@@ -213,7 +261,7 @@ export class MobileRelayServer {
       return;
     }
 
-    if (req.method === 'GET' && req.url === '/api/history') {
+    if (req.method === 'GET' && cleanPath === '/api/history') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({
@@ -223,13 +271,13 @@ export class MobileRelayServer {
       return;
     }
 
-    if (req.method === 'GET' && req.url === '/api/config') {
+    if (req.method === 'GET' && cleanPath === '/api/config') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(this.engine.getConfig()));
       return;
     }
 
-    if (req.method === 'POST' && req.url === '/api/config') {
+    if (req.method === 'POST' && cleanPath === '/api/config') {
       let body = '';
       req.on('data', (chunk: Buffer) => {
         body += chunk.toString('utf-8');
@@ -253,7 +301,7 @@ export class MobileRelayServer {
       return;
     }
 
-    if (req.method === 'POST' && req.url === '/api/merge') {
+    if (req.method === 'POST' && cleanPath === '/api/merge') {
       let body = '';
       req.on('data', (chunk: Buffer) => {
         body += chunk.toString('utf-8');
@@ -286,7 +334,7 @@ export class MobileRelayServer {
       return;
     }
 
-    if (req.method === 'POST' && req.url === '/api/approval') {
+    if (req.method === 'POST' && cleanPath === '/api/approval') {
       let body = '';
       req.on('data', (chunk: Buffer) => {
         body += chunk.toString('utf-8');
@@ -311,7 +359,7 @@ export class MobileRelayServer {
       return;
     }
 
-    if (req.method === 'POST' && req.url === '/api/prompt') {
+    if (req.method === 'POST' && cleanPath === '/api/prompt') {
       let body = '';
       req.on('data', (chunk: Buffer) => {
         body += chunk.toString('utf-8');
@@ -358,6 +406,12 @@ export class MobileRelayServer {
     req: http.IncomingMessage,
     socket: Duplex
   ): void {
+    if (!this.isAuthorizedRequest(req)) {
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
     const key = req.headers['sec-websocket-key'];
     if (!key || typeof key !== 'string') {
       socket.destroy();
