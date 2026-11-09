@@ -2,6 +2,12 @@ import * as path from 'path';
 import { loadMegaXConfig } from './config/configLoader';
 import { OrchestratorEngine } from './orchestrator/orchestratorEngine';
 import { MobileRelayServer } from './relay/mobileRelayServer';
+import {
+  AntiGravityAgentAdapter,
+  ClaudeAgentAdapter,
+  CodexAgentAdapter,
+} from './agents/liveProviders';
+import { AgentRegistry } from './agents/agentRegistry';
 
 export * from './types/contracts';
 export * from './config/configLoader';
@@ -10,8 +16,17 @@ export * from './security/securityGate';
 export * from './git/gitManager';
 export * from './verifier/verificationRunner';
 export * from './agents/agentRegistry';
+export * from './agents/liveProviders';
 export * from './orchestrator/orchestratorEngine';
 export * from './relay/mobileRelayServer';
+
+export function createLiveAgentRegistry(): AgentRegistry {
+  const registry = new AgentRegistry();
+  registry.register(new ClaudeAgentAdapter('claude-3-7-sonnet'));
+  registry.register(new AntiGravityAgentAdapter('antigravity'));
+  registry.register(new CodexAgentAdapter('codex'));
+  return registry;
+}
 
 export function bootstrapDaemon(configPath?: string): OrchestratorEngine {
   const defaultPath = path.resolve(__dirname, '..', '..', 'megax.config.json');
@@ -41,20 +56,36 @@ export function bootstrapDaemon(configPath?: string): OrchestratorEngine {
   return new OrchestratorEngine({
     workspaceRoot,
     config,
+    agentRegistry: createLiveAgentRegistry(),
   });
 }
 
 export async function startDaemonRelayServer(
   port = 4040,
   configPath?: string
-): Promise<{ engine: OrchestratorEngine; relay: MobileRelayServer; port: number }> {
+): Promise<{
+  engine: OrchestratorEngine;
+  relay: MobileRelayServer;
+  port: number;
+}> {
   const engine = bootstrapDaemon(configPath);
   const relay = new MobileRelayServer(engine);
   const boundPort = await relay.start(port, '0.0.0.0');
-  console.log(`📡 Mobile Relay Server listening on ws://0.0.0.0:${boundPort}/ws`);
+  console.log(
+    `📡 Mobile Relay Server listening on ws://0.0.0.0:${boundPort}/ws`
+  );
   return { engine, relay, port: boundPort };
 }
 
 if (require.main === module) {
-  bootstrapDaemon();
+  if (process.argv.includes('--serve')) {
+    const portArgIndex = process.argv.indexOf('--port');
+    const port =
+      portArgIndex !== -1 && process.argv[portArgIndex + 1]
+        ? Number(process.argv[portArgIndex + 1])
+        : 4040;
+    void startDaemonRelayServer(port);
+  } else {
+    bootstrapDaemon();
+  }
 }
