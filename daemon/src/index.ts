@@ -7,6 +7,8 @@ export * from './patcher/filePatcher';
 export * from './security/securityGate';
 export * from './git/gitManager';
 export * from './verifier/verificationRunner';
+export * from './agents/agentRegistry';
+export * from './orchestrator/orchestratorEngine';
 
 export function bootstrapDaemon(configPath?: string): void {
   const defaultPath = path.resolve(__dirname, '..', '..', 'megax.config.json');
