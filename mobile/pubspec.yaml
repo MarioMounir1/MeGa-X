@@ -1,0 +1,20 @@
+name: megax_mobile_controller
+description: MeGa X Mobile Steering Wheel - Flutter Companion App for the Autonomous Local-First AI Multi-Agent Orchestrator.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
