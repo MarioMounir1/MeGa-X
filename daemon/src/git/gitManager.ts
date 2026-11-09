@@ -1,4 +1,6 @@
 import { execFileSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class GitOperationError extends Error {
   constructor(message: string) {
@@ -38,12 +40,15 @@ export class GitManager {
   }
 
   /**
-   * Returns true if the workspace is inside a valid Git work tree.
+   * Returns true if the workspace root has its own .git directory and a valid HEAD commit.
    */
   public isGitRepository(): boolean {
+    if (!fs.existsSync(path.join(this.workspaceRoot, '.git'))) {
+      return false;
+    }
     try {
-      const out = this.runGit(['rev-parse', '--is-inside-work-tree']);
-      return out === 'true';
+      this.runGit(['rev-parse', '--verify', 'HEAD']);
+      return true;
     } catch {
       return false;
     }
@@ -90,7 +95,19 @@ export class GitManager {
    */
   public commitAll(message: string): string | null {
     this.runGit(['add', '-A']);
-    const status = this.runGit(['status', '--porcelain']);
+    try {
+      this.runGit(['reset', '--', '.megax']);
+    } catch {
+      // Ignore if .megax does not exist
+    }
+    const status = this.runGit([
+      'status',
+      '--porcelain',
+      '--untracked-files=normal',
+    ])
+      .split('\n')
+      .filter((line) => line.trim() !== '' && !line.includes('.megax'))
+      .join('\n');
     if (!status) {
       return null;
     }
@@ -107,7 +124,7 @@ export class GitManager {
     deleteTaskBranch?: string;
   }): void {
     this.runGit(['reset', '--hard', 'HEAD']);
-    this.runGit(['clean', '-fd']);
+    this.runGit(['clean', '-fd', '-e', '.megax']);
 
     if (options?.returnBranch) {
       const current = this.getCurrentBranch();

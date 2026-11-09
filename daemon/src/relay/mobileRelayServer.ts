@@ -206,6 +206,16 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && req.url === '/api/history') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          history: this.engine.getAuditStore().readAll(),
+        })
+      );
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/api/approval') {
       let body = '';
       req.on('data', (chunk: Buffer) => {

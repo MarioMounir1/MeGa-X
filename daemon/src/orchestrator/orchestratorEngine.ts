@@ -1,7 +1,9 @@
 import { AgentRegistry } from '../agents/agentRegistry';
 import { GitManager } from '../git/gitManager';
 import { FilePatcher } from '../patcher/filePatcher';
+import { WorkspaceScanner } from '../patcher/workspaceScanner';
 import { ApprovalHandler, SecurityGate } from '../security/securityGate';
+import { TaskAuditStore } from '../storage/taskAuditStore';
 import {
   AgentTaskPayload,
   ContextFile,
@@ -56,6 +58,8 @@ export class OrchestratorEngine {
   private readonly registry: AgentRegistry;
   private readonly gitManager: GitManager;
   private readonly filePatcher: FilePatcher;
+  private readonly workspaceScanner: WorkspaceScanner;
+  private readonly auditStore: TaskAuditStore;
   private readonly securityGate: SecurityGate;
   private readonly verificationRunner: VerificationRunner;
   private stateListener?: StateChangeListener;
@@ -66,6 +70,8 @@ export class OrchestratorEngine {
     this.registry = options.agentRegistry ?? new AgentRegistry();
     this.gitManager = new GitManager(this.workspaceRoot);
     this.filePatcher = new FilePatcher(this.workspaceRoot);
+    this.workspaceScanner = new WorkspaceScanner(this.workspaceRoot);
+    this.auditStore = new TaskAuditStore(this.workspaceRoot);
     this.securityGate = new SecurityGate(
       this.config.security,
       options.onApprovalRequest
@@ -76,6 +82,14 @@ export class OrchestratorEngine {
       options.onStream
     );
     this.stateListener = options.onStateChange;
+  }
+
+  public getAuditStore(): TaskAuditStore {
+    return this.auditStore;
+  }
+
+  public getWorkspaceScanner(): WorkspaceScanner {
+    return this.workspaceScanner;
   }
 
   public getAgentRegistry(): AgentRegistry {
@@ -131,7 +145,11 @@ export class OrchestratorEngine {
       `Planning task "${masterTaskId}" using ${planner.agentId} (${this.config.engineMode})`
     );
 
-    const initialContext = this.filePatcher.readContextFiles(contextFilePaths);
+    const initialContext =
+      contextFilePaths.length > 0
+        ? this.filePatcher.readContextFiles(contextFilePaths)
+        : this.workspaceScanner.discoverContextForPrompt(prompt);
+
     const planResponse = await planner.plan({
       taskId: masterTaskId,
       prompt,
@@ -154,7 +172,9 @@ export class OrchestratorEngine {
       const subPrompt = microPrompts[i];
 
       const currentContext =
-        this.filePatcher.readContextFiles(contextFilePaths);
+        contextFilePaths.length > 0
+          ? this.filePatcher.readContextFiles(contextFilePaths)
+          : this.workspaceScanner.discoverContextForPrompt(subPrompt);
       const subResult = await this.executeMicroTask(
         subTaskId,
         subPrompt,
@@ -168,12 +188,15 @@ export class OrchestratorEngine {
       }
     }
 
-    return {
+    const finalResult: OrchestrationRunResult = {
       masterTaskId,
       engineMode: this.config.engineMode,
       overallSuccess,
       microTaskResults,
     };
+
+    this.auditStore.recordRun(prompt, finalResult);
+    return finalResult;
   }
 
   /**
