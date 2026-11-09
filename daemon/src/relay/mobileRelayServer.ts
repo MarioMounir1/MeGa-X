@@ -9,6 +9,8 @@ import {
 import {
   ApprovalDecisionPayload,
   ApprovalRequestPayload,
+  EngineMode,
+  MegaXConfig,
   TerminalStreamEvent,
 } from '../types/contracts';
 
@@ -32,7 +34,8 @@ export type RelayOutboundMessage =
   | { type: 'TERMINAL_STREAM'; payload: TerminalStreamEvent }
   | { type: 'STATE_CHANGE'; payload: TaskStateChangeEvent }
   | { type: 'APPROVAL_REQUIRED'; payload: ApprovalRequestPayload }
-  | { type: 'ORCHESTRATION_RESULT'; payload: OrchestrationRunResult };
+  | { type: 'ORCHESTRATION_RESULT'; payload: OrchestrationRunResult }
+  | { type: 'CONFIG_UPDATED'; payload: MegaXConfig };
 
 export type RelayInboundMessage =
   | {
@@ -44,6 +47,10 @@ export type RelayInboundMessage =
   | {
       type: 'APPROVAL_DECISION';
       payload: ApprovalDecisionPayload;
+    }
+  | {
+      type: 'SET_ENGINE_MODE';
+      engineMode: EngineMode;
     };
 
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
@@ -216,6 +223,69 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && req.url === '/api/config') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(this.engine.getConfig()));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/config') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { engineMode: EngineMode };
+          const updated = this.engine.setEngineMode(parsed.engineMode);
+          this.broadcast({ type: 'CONFIG_UPDATED', payload: updated });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(updated));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: err instanceof Error ? err.message : 'Invalid request',
+            })
+          );
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/merge') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as {
+            taskBranch: string;
+            targetBranch?: string;
+            deleteAfterMerge?: boolean;
+          };
+          const mergeCommitHash = this.engine
+            .getGitManager()
+            .mergeTaskBranch(
+              parsed.taskBranch,
+              parsed.targetBranch ?? 'main',
+              parsed.deleteAfterMerge ?? true
+            );
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ merged: true, mergeCommitHash }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: err instanceof Error ? err.message : 'Merge failed',
+            })
+          );
+        }
+      });
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/api/approval') {
       let body = '';
       req.on('data', (chunk: Buffer) => {
@@ -334,6 +404,12 @@ export class MobileRelayServer {
   private handleInboundWsMessage(msg: RelayInboundMessage): void {
     if (msg.type === 'APPROVAL_DECISION') {
       this.submitApprovalDecision(msg.payload);
+      return;
+    }
+
+    if (msg.type === 'SET_ENGINE_MODE') {
+      const updated = this.engine.setEngineMode(msg.engineMode);
+      this.broadcast({ type: 'CONFIG_UPDATED', payload: updated });
       return;
     }
 

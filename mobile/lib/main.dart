@@ -44,6 +44,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
   final List<TerminalStreamEvent> _terminalLogs = [];
   ApprovalRequestPayload? _pendingApproval;
   String _currentTaskState = 'IDLE';
+  String _engineMode = 'SINGLE_AGENT';
   bool _connected = false;
 
   @override
@@ -118,6 +119,19 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
       appBar: AppBar(
         title: const Text('MeGa X • Mobile Steering Wheel'),
         actions: [
+          TextButton.icon(
+            onPressed: _connected
+                ? () {
+                    final nextMode = _engineMode == 'SINGLE_AGENT'
+                        ? 'MULTI_AGENT'
+                        : 'SINGLE_AGENT';
+                    setState(() => _engineMode = nextMode);
+                    _relay.setEngineMode(nextMode);
+                  }
+                : null,
+            icon: const Icon(Icons.swap_horiz, size: 18),
+            label: Text(_engineMode),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Chip(

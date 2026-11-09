@@ -147,5 +147,36 @@ export class GitManager {
       }
     }
   }
+
+  /**
+   * Merges a verified `megax/<task-id>` branch into `targetBranch` (e.g. `main`)
+   * and optionally deletes the temporary task branch after a clean merge.
+   */
+  public mergeTaskBranch(
+    taskBranch: string,
+    targetBranch = 'main',
+    deleteAfterMerge = true
+  ): string {
+    const current = this.getCurrentBranch();
+    if (current !== targetBranch) {
+      this.runGit(['checkout', targetBranch]);
+    }
+
+    this.runGit([
+      'merge',
+      '--no-ff',
+      '-m',
+      `Merge verified MeGa X branch ${taskBranch} into ${targetBranch}`,
+      taskBranch,
+    ]);
+
+    const mergeCommitHash = this.runGit(['rev-parse', '--short', 'HEAD']);
+
+    if (deleteAfterMerge && taskBranch !== targetBranch) {
+      this.runGit(['branch', '-d', taskBranch]);
+    }
+
+    return mergeCommitHash;
+  }
 }
 

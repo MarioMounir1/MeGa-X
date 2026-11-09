@@ -88,6 +88,18 @@ class MegaXRelayService {
     );
   }
 
+  void setEngineMode(String engineMode) {
+    final socket = _socket;
+    if (socket == null) return;
+
+    socket.add(
+      jsonEncode({
+        'type': 'SET_ENGINE_MODE',
+        'engineMode': engineMode,
+      }),
+    );
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

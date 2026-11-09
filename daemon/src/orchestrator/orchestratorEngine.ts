@@ -7,6 +7,7 @@ import { TaskAuditStore } from '../storage/taskAuditStore';
 import {
   AgentTaskPayload,
   ContextFile,
+  EngineMode,
   MegaXConfig,
   TaskState,
 } from '../types/contracts';
@@ -54,7 +55,7 @@ export interface OrchestratorOptions {
 
 export class OrchestratorEngine {
   private readonly workspaceRoot: string;
-  private readonly config: MegaXConfig;
+  private config: MegaXConfig;
   private readonly registry: AgentRegistry;
   private readonly gitManager: GitManager;
   private readonly filePatcher: FilePatcher;
@@ -90,6 +91,28 @@ export class OrchestratorEngine {
 
   public getWorkspaceScanner(): WorkspaceScanner {
     return this.workspaceScanner;
+  }
+
+  public getGitManager(): GitManager {
+    return this.gitManager;
+  }
+
+  public getConfig(): MegaXConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Dynamically switches the Daemon between SINGLE_AGENT and MULTI_AGENT mode at runtime.
+   */
+  public setEngineMode(engineMode: EngineMode): MegaXConfig {
+    if (engineMode !== 'SINGLE_AGENT' && engineMode !== 'MULTI_AGENT') {
+      throw new Error(`Invalid engineMode: ${String(engineMode)}`);
+    }
+    this.config = {
+      ...this.config,
+      engineMode,
+    };
+    return this.getConfig();
   }
 
   public getAgentRegistry(): AgentRegistry {
