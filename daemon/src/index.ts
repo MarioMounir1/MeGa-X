@@ -23,6 +23,7 @@ export * from './agents/liveProviders';
 export * from './orchestrator/orchestratorEngine';
 export * from './relay/mobileRelayServer';
 export * from './relay/fcmDispatcher';
+export * from './cli';
 
 export function createLiveAgentRegistry(): AgentRegistry {
   const registry = new AgentRegistry();

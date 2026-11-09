@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "description": "MeGa X Local Core Daemon - Autonomous Local-First AI Multi-Agent Orchestrator",
   "main": "dist/index.js",
+  "bin": {
+    "megax": "./dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "serve": "node dist/index.js --serve",
+    "cli": "node dist/cli.js",
     "demo": "node dist/demo.js",
     "dev": "ts-node src/index.ts",
     "test": "node --test dist/tests/**/*.test.js"
