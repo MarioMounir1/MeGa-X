@@ -1,0 +1,26 @@
+{
+  "name": "@megax/daemon",
+  "version": "0.1.0",
+  "description": "MeGa X Local Core Daemon - Autonomous Local-First AI Multi-Agent Orchestrator",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "node --test dist/tests/**/*.test.js"
+  },
+  "keywords": [
+    "megax",
+    "orchestrator",
+    "multi-agent",
+    "self-healing"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}
+

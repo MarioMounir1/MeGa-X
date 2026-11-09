@@ -1,0 +1,19 @@
+{
+  "projectName": "Target-Project",
+  "engineMode": "SINGLE_AGENT",
+  "primaryAgent": "claude-3-7-sonnet",
+  "multiAgentConfig": {
+    "planner": "claude-3-7-sonnet",
+    "executor": "antigravity",
+    "reviewer": "codex"
+  },
+  "verification": {
+    "testCommand": "npm test",
+    "compileCommand": "npx tsc --noEmit",
+    "maxFixAttempts": 3
+  },
+  "security": {
+    "requireApprovalOn": ["DB_MIGRATION", "FILE_DELETE", "MAX_RETRY_EXCEEDED"]
+  }
+}
+
