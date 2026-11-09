@@ -3,6 +3,9 @@ import { loadMegaXConfig } from './config/configLoader';
 
 export * from './types/contracts';
 export * from './config/configLoader';
+export * from './patcher/filePatcher';
+export * from './security/securityGate';
+export * from './git/gitManager';
 
 export function bootstrapDaemon(configPath?: string): void {
   const defaultPath = path.resolve(__dirname, '..', '..', 'megax.config.json');
@@ -31,4 +34,3 @@ export function bootstrapDaemon(configPath?: string): void {
 if (require.main === module) {
   bootstrapDaemon();
 }
-
