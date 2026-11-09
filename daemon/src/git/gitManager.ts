@@ -178,5 +178,47 @@ export class GitManager {
 
     return mergeCommitHash;
   }
+
+  /**
+   * Returns the current working tree status lines and unified diff against HEAD.
+   */
+  public getWorkingTreeDiff(): {
+    currentBranch: string;
+    statusLines: string[];
+    unifiedDiff: string;
+  } {
+    if (!this.isGitRepository()) {
+      return {
+        currentBranch: 'no-git',
+        statusLines: [],
+        unifiedDiff: '',
+      };
+    }
+
+    const currentBranch = this.getCurrentBranch();
+    const rawStatus = this.runGit([
+      'status',
+      '--porcelain',
+      '--untracked-files=normal',
+    ]);
+    const statusLines = rawStatus
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l !== '' && !l.includes('.megax'));
+
+    const unifiedDiff = this.runGit(['diff', 'HEAD']);
+    return {
+      currentBranch,
+      statusLines,
+      unifiedDiff,
+    };
+  }
+
+  /**
+   * Returns the unified diff between a base branch and a task branch (`megax/<task-id>`).
+   */
+  public getBranchDiff(taskBranch: string, baseBranch = 'main'): string {
+    return this.runGit(['diff', `${baseBranch}...${taskBranch}`]);
+  }
 }
 

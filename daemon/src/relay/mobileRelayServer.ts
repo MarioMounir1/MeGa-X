@@ -271,6 +271,14 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/diff') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify(this.engine.getGitManager().getWorkingTreeDiff())
+      );
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/config') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(this.engine.getConfig()));
