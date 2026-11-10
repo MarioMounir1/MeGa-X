@@ -336,6 +336,55 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'POST' && cleanPath === '/api/queue/cancel') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { taskId?: string };
+          const targetId = (parsed.taskId ?? '').trim();
+          if (!targetId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'taskId is required' }));
+            return;
+          }
+          const cancelled = this.taskQueue.cancelQueuedTask(targetId);
+          res.writeHead(cancelled ? 200 : 404, {
+            'Content-Type': 'application/json',
+          });
+          res.end(
+            JSON.stringify({
+              cancelled,
+              taskId: targetId,
+            })
+          );
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: err instanceof Error ? err.message : 'Invalid JSON',
+            })
+          );
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/queue/clear') {
+      const clearedCount = this.taskQueue.clearFinishedTasks();
+      const remainingCount = this.taskQueue.getQueueSnapshot().length;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          clearedCount,
+          remainingCount,
+        })
+      );
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/diff') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(

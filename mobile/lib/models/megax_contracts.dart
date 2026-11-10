@@ -229,3 +229,26 @@ class WorkspaceFileContent {
   }
 }
 
+class QueuedTaskSummary {
+  final String taskId;
+  final String prompt;
+  final String status; // 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
+  final String enqueuedAt;
+
+  const QueuedTaskSummary({
+    required this.taskId,
+    required this.prompt,
+    required this.status,
+    required this.enqueuedAt,
+  });
+
+  factory QueuedTaskSummary.fromJson(Map<String, dynamic> json) {
+    return QueuedTaskSummary(
+      taskId: json['taskId'] as String? ?? '',
+      prompt: json['prompt'] as String? ?? '',
+      status: json['status'] as String? ?? 'QUEUED',
+      enqueuedAt: json['enqueuedAt'] as String? ?? '',
+    );
+  }
+}
+

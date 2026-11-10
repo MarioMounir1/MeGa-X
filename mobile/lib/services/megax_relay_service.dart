@@ -231,6 +231,53 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<QueuedTaskSummary>> fetchQueue() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/queue'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['queue'] as List<dynamic>?)
+              ?.map(
+                  (e) => QueuedTaskSummary.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<bool> cancelQueuedTask(String taskId) async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.postUrl(Uri.parse('$_httpBaseUrl/api/queue/cancel'));
+      req.headers.contentType = ContentType.json;
+      req.write(jsonEncode({'taskId': taskId}));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return decoded['cancelled'] as bool? ?? false;
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<int> clearFinishedQueue() async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.postUrl(Uri.parse('$_httpBaseUrl/api/queue/clear'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['clearedCount'] as num?)?.toInt() ?? 0;
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

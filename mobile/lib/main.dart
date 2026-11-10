@@ -47,6 +47,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
   DaemonMetricsSummary? _metrics;
   GitDiffSnapshot? _diffSnapshot;
   List<String> _taskBranches = const [];
+  List<QueuedTaskSummary> _queueSnapshot = const [];
   String _currentTaskState = 'IDLE';
   String _engineMode = 'SINGLE_AGENT';
   bool _connected = false;
@@ -98,11 +99,13 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
       final metrics = await _relay.fetchMetrics();
       final diff = await _relay.fetchDiff();
       final branches = await _relay.fetchTaskBranches();
+      final queue = await _relay.fetchQueue();
       if (!mounted) return;
       setState(() {
         _metrics = metrics;
         _diffSnapshot = diff;
         _taskBranches = branches;
+        _queueSnapshot = queue;
       });
     } catch (_) {
       // Ignore transient telemetry polling errors
@@ -372,7 +375,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                             ),
                           ),
 
-                          // Tab 3: Self-Healing Telemetry Metrics
+                          // Tab 3: Self-Healing Telemetry Metrics & FIFO Task Queue
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
@@ -382,8 +385,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                               border:
                                   Border.all(color: const Color(0xFF30363D)),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: ListView(
                               children: [
                                 Text(
                                     'Total Runs: ${_metrics?.totalRuns ?? 0}'),
@@ -395,6 +397,45 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                                     'Self-Healed Passes: ${_metrics?.selfHealedPasses ?? 0}'),
                                 Text(
                                     'Hard Rollbacks: ${_metrics?.rolledBackMicroTasks ?? 0}'),
+                                const Divider(height: 20),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'FIFO Task Queue',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    TextButton(
+                                      onPressed: _connected
+                                          ? () async {
+                                              await _relay.clearFinishedQueue();
+                                              await _refreshTelemetry();
+                                            }
+                                          : null,
+                                      child: const Text('Clear Finished'),
+                                    ),
+                                  ],
+                                ),
+                                for (final q in _queueSnapshot)
+                                  ListTile(
+                                    dense: true,
+                                    title: Text('${q.taskId} • ${q.status}'),
+                                    subtitle: Text(q.prompt,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
+                                    trailing: q.status == 'QUEUED'
+                                        ? OutlinedButton(
+                                            onPressed: () async {
+                                              await _relay
+                                                  .cancelQueuedTask(q.taskId);
+                                              await _refreshTelemetry();
+                                            },
+                                            child: const Text('Cancel'),
+                                          )
+                                        : null,
+                                  ),
                               ],
                             ),
                           ),

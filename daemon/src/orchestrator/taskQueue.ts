@@ -7,7 +7,7 @@ export interface QueuedTaskItem {
   taskId: string;
   prompt: string;
   contextFiles: string[];
-  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   enqueuedAt: string;
   startedAt?: string;
   completedAt?: string;
@@ -111,6 +111,54 @@ export class TaskQueueManager {
 
       void checkAndRun();
     });
+  }
+
+  /**
+   * Cancels a waiting task that is still in QUEUED state before it begins executing.
+   */
+  public cancelQueuedTask(taskId: string): boolean {
+    const item = this.queue.find(
+      (q) => q.taskId === taskId && q.status === 'QUEUED'
+    );
+    if (!item) {
+      return false;
+    }
+
+    const cancelledResult: OrchestrationRunResult = {
+      masterTaskId: item.taskId,
+      engineMode: this.engine.getConfig().engineMode,
+      overallSuccess: false,
+      microTaskResults: [],
+    };
+
+    item.status = 'CANCELLED';
+    item.completedAt = new Date().toISOString();
+    item.result = cancelledResult;
+
+    for (const cb of this.onResultCallbacks) {
+      cb(cancelledResult);
+    }
+
+    return true;
+  }
+
+  /**
+   * Prunes all COMPLETED, FAILED, and CANCELLED items from the queue history,
+   * preserving any RUNNING or QUEUED items.
+   */
+  public clearFinishedTasks(): number {
+    const initialLength = this.queue.length;
+    for (let i = this.queue.length - 1; i >= 0; i--) {
+      const status = this.queue[i].status;
+      if (
+        status === 'COMPLETED' ||
+        status === 'FAILED' ||
+        status === 'CANCELLED'
+      ) {
+        this.queue.splice(i, 1);
+      }
+    }
+    return initialLength - this.queue.length;
   }
 
   /**
