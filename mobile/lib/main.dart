@@ -228,42 +228,137 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                 ),
               ),
 
-            // 3. Live WebSocket Terminal Output Stream
+            // 3. Multi-Tab Console (Terminal | Git & Branches | Metrics)
             Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF010409),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF30363D)),
-                ),
-                child: _terminalLogs.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Waiting for live Daemon terminal output...',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _terminalLogs.length,
-                        itemBuilder: (context, index) {
-                          final item = _terminalLogs[index];
-                          final color = item.stream == 'stderr'
-                              ? const Color(0xFFFF7B72)
-                              : item.stream == 'system'
-                                  ? const Color(0xFF58A6FF)
-                                  : const Color(0xFFC9D1D9);
-                          return Text(
-                            item.data,
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 12,
-                              color: color,
+              child: DefaultTabController(
+                length: 3,
+                child: Column(
+                  children: [
+                    TabBar(
+                      onTap: (_) => _refreshTelemetry(),
+                      tabs: const [
+                        Tab(text: 'Terminal'),
+                        Tab(text: 'Git & Branches'),
+                        Tab(text: 'Metrics'),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          // Tab 1: Live WebSocket Terminal Output Stream
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF010409),
+                              borderRadius: BorderRadius.circular(8),
+                              border:
+                                  Border.all(color: const Color(0xFF30363D)),
                             ),
-                          );
-                        },
+                            child: _terminalLogs.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                      'Waiting for live Daemon terminal output...',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    itemCount: _terminalLogs.length,
+                                    itemBuilder: (context, index) {
+                                      final item = _terminalLogs[index];
+                                      final color = item.stream == 'stderr'
+                                          ? const Color(0xFFFF7B72)
+                                          : item.stream == 'system'
+                                              ? const Color(0xFF58A6FF)
+                                              : const Color(0xFFC9D1D9);
+                                      return Text(
+                                        item.data,
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 12,
+                                          color: color,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+
+                          // Tab 2: Git Diff & Task Branches
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF010409),
+                              borderRadius: BorderRadius.circular(8),
+                              border:
+                                  Border.all(color: const Color(0xFF30363D)),
+                            ),
+                            child: ListView(
+                              children: [
+                                Text(
+                                  'Active Branch: ${_diffSnapshot?.currentBranch ?? "unknown"}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                for (final b in _taskBranches)
+                                  ListTile(
+                                    dense: true,
+                                    title: Text(b),
+                                    trailing: FilledButton.tonal(
+                                      onPressed: () async {
+                                        await _relay.mergeTaskBranch(b);
+                                        await _refreshTelemetry();
+                                      },
+                                      child: const Text('Merge to main'),
+                                    ),
+                                  ),
+                                const Divider(),
+                                Text(
+                                  _diffSnapshot?.unifiedDiff.isNotEmpty == true
+                                      ? _diffSnapshot!.unifiedDiff
+                                      : 'Working tree is clean (no uncommitted diff).',
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Tab 3: Self-Healing Telemetry Metrics
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF010409),
+                              borderRadius: BorderRadius.circular(8),
+                              border:
+                                  Border.all(color: const Color(0xFF30363D)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    'Total Runs: ${_metrics?.totalRuns ?? 0}'),
+                                Text(
+                                    'Success Rate: ${_metrics?.successRatePercent ?? 100}%'),
+                                Text(
+                                    'First-Attempt Passes: ${_metrics?.firstAttemptPasses ?? 0}'),
+                                Text(
+                                    'Self-Healed Passes: ${_metrics?.selfHealedPasses ?? 0}'),
+                                Text(
+                                    'Hard Rollbacks: ${_metrics?.rolledBackMicroTasks ?? 0}'),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 12),

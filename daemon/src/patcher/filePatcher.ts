@@ -11,9 +11,33 @@ export class PatchSecurityError extends Error {
 
 export class FilePatcher {
   private readonly workspaceRoot: string;
+  private readonly maxFileBytes: number;
 
-  constructor(workspaceRoot: string) {
+  constructor(workspaceRoot: string, maxFileBytes = 2 * 1024 * 1024) {
     this.workspaceRoot = path.resolve(workspaceRoot);
+    this.maxFileBytes = maxFileBytes;
+  }
+
+  /**
+   * Validates a batch of FileDiffs for blank paths, path traversal, and runaway payload sizes
+   * before any file is written to disk.
+   */
+  public validateDiffBatch(fileDiffs: FileDiff[]): void {
+    for (const diff of fileDiffs) {
+      if (!diff.path || diff.path.trim() === '') {
+        throw new PatchSecurityError('FileDiff path cannot be empty.');
+      }
+      this.resolveSafePath(diff.path);
+
+      if (diff.action !== 'DELETE') {
+        const byteLen = Buffer.byteLength(diff.content ?? '', 'utf-8');
+        if (byteLen > this.maxFileBytes) {
+          throw new PatchSecurityError(
+            `FileDiff "${diff.path}" (${byteLen} bytes) exceeds max allowed size (${this.maxFileBytes} bytes).`
+          );
+        }
+      }
+    }
   }
 
   /**
@@ -49,6 +73,7 @@ export class FilePatcher {
    * Applies an array of FileDiff operations (CREATE, UPDATE, DELETE) to the workspace.
    */
   public applyDiffs(fileDiffs: FileDiff[]): string[] {
+    this.validateDiffBatch(fileDiffs);
     const modifiedPaths: string[] = [];
 
     for (const diff of fileDiffs) {
