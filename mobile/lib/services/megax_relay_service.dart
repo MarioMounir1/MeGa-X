@@ -182,6 +182,19 @@ class MegaXRelayService {
     }
   }
 
+  Future<bool> runManualVerification() async {
+    final client = HttpClient();
+    try {
+      final req = await client.postUrl(Uri.parse('$_httpBaseUrl/api/verify'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return decoded['passed'] as bool? ?? false;
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

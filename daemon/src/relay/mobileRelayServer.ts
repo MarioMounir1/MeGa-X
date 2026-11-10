@@ -481,6 +481,27 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'POST' && cleanPath === '/api/verify') {
+      void this.engine
+        .getVerificationRunner()
+        .runVerificationSuite(`manual_verify_${Date.now() % 10000}`, 1)
+        .then((result) => {
+          this.streamThrottler.flushNow();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        })
+        .catch((err: unknown) => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error:
+                err instanceof Error ? err.message : 'Verification failed',
+            })
+          );
+        });
+      return;
+    }
+
     if (req.method === 'POST' && cleanPath === '/api/approval') {
       let body = '';
       req.on('data', (chunk: Buffer) => {
