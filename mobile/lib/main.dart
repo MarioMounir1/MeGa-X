@@ -353,12 +353,29 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                                   ListTile(
                                     dense: true,
                                     title: Text(b),
-                                    trailing: FilledButton.tonal(
-                                      onPressed: () async {
-                                        await _relay.mergeTaskBranch(b);
-                                        await _refreshTelemetry();
-                                      },
-                                      child: const Text('Merge to main'),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        FilledButton.tonal(
+                                          onPressed: () async {
+                                            await _relay.mergeTaskBranch(b);
+                                            await _refreshTelemetry();
+                                          },
+                                          child: const Text('Merge to main'),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        IconButton(
+                                          tooltip: 'Discard task branch',
+                                          onPressed: () async {
+                                            await _relay.deleteTaskBranch(b);
+                                            await _refreshTelemetry();
+                                          },
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Color(0xFFF85149),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 const Divider(),

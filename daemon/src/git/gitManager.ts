@@ -244,6 +244,34 @@ export class GitManager {
   }
 
   /**
+   * Safely deletes an isolated `megax/*` task branch.
+   * Refuses to delete non-`megax/` branches (e.g., `main` or `master`).
+   * If currently checked out on `taskBranch`, switches to `fallbackBranch` first.
+   */
+  public deleteTaskBranch(
+    taskBranch: string,
+    fallbackBranch = 'main'
+  ): { deletedBranch: string; currentBranch: string } {
+    const cleanBranch = taskBranch.trim();
+    if (!cleanBranch.startsWith('megax/')) {
+      throw new GitOperationError(
+        `Refusing to delete protected non-task branch "${cleanBranch}". Only "megax/*" branches can be deleted.`
+      );
+    }
+
+    const current = this.getCurrentBranch();
+    if (current === cleanBranch) {
+      this.runGit(['checkout', fallbackBranch]);
+    }
+
+    this.runGit(['branch', '-D', cleanBranch]);
+    return {
+      deletedBranch: cleanBranch,
+      currentBranch: this.getCurrentBranch(),
+    };
+  }
+
+  /**
    * Stashes any uncommitted manual edits (excluding `.megax`) before switching to a task branch.
    * Returns true if a stash entry was created.
    */

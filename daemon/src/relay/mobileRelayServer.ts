@@ -407,6 +407,81 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/branches/diff') {
+      const parsedUrl = new URL(
+        req.url ?? '/api/branches/diff',
+        'http://localhost'
+      );
+      const taskBranch = (parsedUrl.searchParams.get('branch') ?? '').trim();
+      const baseBranch = (parsedUrl.searchParams.get('base') ?? 'main').trim();
+      if (!taskBranch) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({ error: 'Query parameter "branch" is required' })
+        );
+        return;
+      }
+      try {
+        const unifiedDiff = this.engine
+          .getGitManager()
+          .getBranchDiff(taskBranch, baseBranch);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            taskBranch,
+            baseBranch,
+            unifiedDiff,
+          })
+        );
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error:
+              err instanceof Error ? err.message : 'Failed to diff task branch',
+          })
+        );
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/branches/delete') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as {
+            taskBranch?: string;
+            fallbackBranch?: string;
+          };
+          const result = this.engine
+            .getGitManager()
+            .deleteTaskBranch(
+              parsed.taskBranch ?? '',
+              parsed.fallbackBranch ?? 'main'
+            );
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              deleted: true,
+              ...result,
+            })
+          );
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error:
+                err instanceof Error ? err.message : 'Branch deletion failed',
+            })
+          );
+        }
+      });
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/commits') {
       const git = this.engine.getGitManager();
       res.writeHead(200, { 'Content-Type': 'application/json' });

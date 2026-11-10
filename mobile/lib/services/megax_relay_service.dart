@@ -166,6 +166,37 @@ class MegaXRelayService {
     }
   }
 
+  Future<void> deleteTaskBranch(String taskBranch) async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.postUrl(Uri.parse('$_httpBaseUrl/api/branches/delete'));
+      req.headers.contentType = ContentType.json;
+      req.write(
+          jsonEncode({'taskBranch': taskBranch, 'fallbackBranch': 'main'}));
+      await req.close();
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<String> fetchBranchDiff(String taskBranch,
+      {String baseBranch = 'main'}) async {
+    final client = HttpClient();
+    try {
+      final uri = Uri.parse('$_httpBaseUrl/api/branches/diff').replace(
+        queryParameters: {'branch': taskBranch, 'base': baseBranch},
+      );
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return decoded['unifiedDiff'] as String? ?? '';
+    } finally {
+      client.close();
+    }
+  }
+
   Future<List<GitCommitEntry>> fetchRecentCommits() async {
     final client = HttpClient();
     try {
