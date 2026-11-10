@@ -25,7 +25,7 @@ export interface VerificationSuiteResult {
 
 export class VerificationRunner {
   private readonly workspaceRoot: string;
-  private readonly config: VerificationConfig;
+  private config: VerificationConfig;
   private streamListener?: TerminalStreamListener;
   private activeChild?: ChildProcess;
   private commandTimeoutMs: number;
@@ -40,6 +40,10 @@ export class VerificationRunner {
     this.config = config;
     this.streamListener = streamListener;
     this.commandTimeoutMs = commandTimeoutMs;
+  }
+
+  public setVerificationConfig(config: VerificationConfig): void {
+    this.config = { ...config };
   }
 
   public setCommandTimeoutMs(timeoutMs: number): void {

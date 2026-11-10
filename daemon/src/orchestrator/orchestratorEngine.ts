@@ -117,6 +117,18 @@ export class OrchestratorEngine {
   }
 
   /**
+   * Hot-reloads a complete MegaXConfig into the OrchestratorEngine, SecurityGate, and VerificationRunner.
+   */
+  public updateConfig(newConfig: MegaXConfig): MegaXConfig {
+    this.config = { ...newConfig };
+    this.securityGate.setRequiredTriggers(
+      newConfig.security.requireApprovalOn
+    );
+    this.verificationRunner.setVerificationConfig(newConfig.verification);
+    return this.getConfig();
+  }
+
+  /**
    * Emergency Kill-Switch: Aborts the active task and kills any running verification child process.
    */
   public abortActiveTask(): void {

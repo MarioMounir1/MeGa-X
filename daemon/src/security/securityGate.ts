@@ -35,7 +35,7 @@ const PROTECTED_FILE_PATTERNS = [
 ];
 
 export class SecurityGate {
-  private readonly requiredTriggers: Set<ApprovalTrigger>;
+  private requiredTriggers: Set<ApprovalTrigger>;
   private approvalHandler?: ApprovalHandler;
   private approvalTimeoutMs?: number;
 
@@ -47,6 +47,10 @@ export class SecurityGate {
     this.requiredTriggers = new Set(securityConfig.requireApprovalOn);
     this.approvalHandler = approvalHandler;
     this.approvalTimeoutMs = approvalTimeoutMs;
+  }
+
+  public setRequiredTriggers(triggers: ApprovalTrigger[]): void {
+    this.requiredTriggers = new Set(triggers);
   }
 
   public setApprovalTimeoutMs(timeoutMs?: number): void {
