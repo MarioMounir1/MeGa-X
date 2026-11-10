@@ -7,6 +7,7 @@ import {
   TaskStateChangeEvent,
 } from '../orchestrator/orchestratorEngine';
 import { TaskQueueManager } from '../orchestrator/taskQueue';
+import { TelemetryMetricsCollector } from '../storage/metricsCollector';
 import {
   ApprovalDecisionPayload,
   ApprovalRequestPayload,
@@ -294,6 +295,15 @@ export class MobileRelayServer {
           history: this.engine.getAuditStore().readAll(),
         })
       );
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/metrics') {
+      const collector = new TelemetryMetricsCollector(
+        this.engine.getAuditStore()
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(collector.getMetricsSummary()));
       return;
     }
 
