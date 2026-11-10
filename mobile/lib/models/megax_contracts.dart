@@ -310,3 +310,37 @@ class DaemonStatusSnapshot {
   }
 }
 
+class AgentRosterSnapshot {
+  final String engineMode;
+  final List<String> registeredAgents;
+  final String primaryAgent;
+  final String planner;
+  final String executor;
+  final String? reviewer;
+
+  const AgentRosterSnapshot({
+    required this.engineMode,
+    required this.registeredAgents,
+    required this.primaryAgent,
+    required this.planner,
+    required this.executor,
+    this.reviewer,
+  });
+
+  factory AgentRosterSnapshot.fromJson(Map<String, dynamic> json) {
+    final agents = (json['registeredAgents'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [];
+    final roles = json['activeRoles'] as Map<String, dynamic>? ?? const {};
+    return AgentRosterSnapshot(
+      engineMode: json['engineMode'] as String? ?? 'SINGLE_AGENT',
+      registeredAgents: agents,
+      primaryAgent: roles['primaryAgent'] as String? ?? 'claude-3-7-sonnet',
+      planner: roles['planner'] as String? ?? 'claude-3-7-sonnet',
+      executor: roles['executor'] as String? ?? 'antigravity',
+      reviewer: roles['reviewer'] as String?,
+    );
+  }
+}
+

@@ -31,6 +31,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/status` | `GET` | Live Daemon health, connected clients, and pending approval IDs |
 | `/api/pairing` | `GET` | Auto-discovered Tailscale (`100.64.0.0/10`) & LAN WebSocket URLs |
 | `/api/config` | `GET` / `POST` | Inspect or dynamically switch `SINGLE_AGENT` / `MULTI_AGENT` mode |
+| `/api/agents` | `GET` | Registered AI agent roster (`claude-3-7-sonnet`, `antigravity`, `codex`, etc.) & active role assignments |
 | `/api/prompt` | `POST` | Enqueue a high-level feature prompt into the FIFO `TaskQueueManager` |
 | `/api/approvals` | `GET` | List full payloads of all pending `SecurityGate` approvals |
 | `/api/approval` | `POST` | Resolve a pending `SecurityGate` approval (`DB_MIGRATION`, `FILE_DELETE`, `MAX_RETRY_EXCEEDED`) |
@@ -63,7 +64,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 37 automated test suites
+npm test          # Runs all 38 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 ```

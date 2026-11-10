@@ -649,6 +649,15 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/agents') {
+      const summary = this.engine
+        .getAgentRegistry()
+        .getRoleAssignmentSummary(this.engine.getConfig());
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(summary));
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/config') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(this.engine.getConfig()));

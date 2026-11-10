@@ -432,6 +432,45 @@ class MegaXRelayService {
     }
   }
 
+  Future<AgentRosterSnapshot> fetchAgentRoster() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/agents'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      return AgentRosterSnapshot.fromJson(
+          jsonDecode(body) as Map<String, dynamic>);
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<void> updateAgentAssignments({
+    String? primaryAgent,
+    String? planner,
+    String? executor,
+    String? reviewer,
+  }) async {
+    final client = HttpClient();
+    try {
+      final req = await client.postUrl(Uri.parse('$_httpBaseUrl/api/config'));
+      req.headers.contentType = ContentType.json;
+      final multiAgentPatch = <String, String>{};
+      if (planner != null) multiAgentPatch['planner'] = planner;
+      if (executor != null) multiAgentPatch['executor'] = executor;
+      if (reviewer != null) multiAgentPatch['reviewer'] = reviewer;
+      req.write(
+        jsonEncode({
+          if (primaryAgent != null) 'primaryAgent': primaryAgent,
+          if (multiAgentPatch.isNotEmpty) 'multiAgentConfig': multiAgentPatch,
+        }),
+      );
+      await req.close();
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

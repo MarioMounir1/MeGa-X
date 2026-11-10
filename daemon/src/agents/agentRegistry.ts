@@ -83,6 +83,41 @@ export class AgentRegistry {
     this.adapters.set(adapter.agentId, adapter);
   }
 
+  public has(agentId: string): boolean {
+    return this.adapters.has(agentId);
+  }
+
+  public listRegisteredAgentIds(): string[] {
+    return Array.from(this.adapters.keys());
+  }
+
+  public getRoleAssignmentSummary(config: MegaXConfig): {
+    engineMode: MegaXConfig['engineMode'];
+    registeredAgents: string[];
+    activeRoles: {
+      primaryAgent: string;
+      planner: string;
+      executor: string;
+      reviewer: string | null;
+    };
+  } {
+    const isSingle = config.engineMode === 'SINGLE_AGENT';
+    return {
+      engineMode: config.engineMode,
+      registeredAgents: this.listRegisteredAgentIds(),
+      activeRoles: {
+        primaryAgent: config.primaryAgent,
+        planner: isSingle
+          ? config.primaryAgent
+          : config.multiAgentConfig.planner,
+        executor: isSingle
+          ? config.primaryAgent
+          : config.multiAgentConfig.executor,
+        reviewer: isSingle ? null : config.multiAgentConfig.reviewer,
+      },
+    };
+  }
+
   public get(agentId: string): IAgentAdapter {
     const adapter = this.adapters.get(agentId);
     if (!adapter) {
