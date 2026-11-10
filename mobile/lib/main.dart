@@ -43,6 +43,9 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
 
   final List<TerminalStreamEvent> _terminalLogs = [];
   ApprovalRequestPayload? _pendingApproval;
+  DaemonMetricsSummary? _metrics;
+  GitDiffSnapshot? _diffSnapshot;
+  List<String> _taskBranches = const [];
   String _currentTaskState = 'IDLE';
   String _engineMode = 'SINGLE_AGENT';
   bool _connected = false;
@@ -79,11 +82,29 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
     }
     try {
       await _relay.connect(_urlController.text.trim());
+      await _refreshTelemetry();
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Connection failed: $err')),
       );
+    }
+  }
+
+  Future<void> _refreshTelemetry() async {
+    if (!_connected) return;
+    try {
+      final metrics = await _relay.fetchMetrics();
+      final diff = await _relay.fetchDiff();
+      final branches = await _relay.fetchTaskBranches();
+      if (!mounted) return;
+      setState(() {
+        _metrics = metrics;
+        _diffSnapshot = diff;
+        _taskBranches = branches;
+      });
+    } catch (_) {
+      // Ignore transient telemetry polling errors
     }
   }
 

@@ -26,6 +26,14 @@ const DB_MIGRATION_CONTENT_PATTERNS = [
   /\bqueryRunner\.(createTable|dropTable|addColumn|dropColumn|query)\b/i,
 ];
 
+const PROTECTED_FILE_PATTERNS = [
+  /(^|\/)\.env(\..+)?$/i,
+  /(^|\/)\.git(\/|$)/i,
+  /(^|\/)megax\.config\.json$/i,
+  /\.(pem|key|p12|pfx)$/i,
+  /(^|\/)id_(rsa|ed25519)$/i,
+];
+
 export class SecurityGate {
   private readonly requiredTriggers: Set<ApprovalTrigger>;
   private approvalHandler?: ApprovalHandler;
@@ -51,6 +59,24 @@ export class SecurityGate {
 
   public isTriggerEnabled(trigger: ApprovalTrigger): boolean {
     return this.requiredTriggers.has(trigger);
+  }
+
+  /**
+   * Returns any file paths in FileDiff[] that attempt to modify protected secrets,
+   * .env files, .git internals, private keys, or megax.config.json.
+   */
+  public detectProtectedFileViolations(fileDiffs: FileDiff[]): string[] {
+    return fileDiffs
+      .map((d) => d.path)
+      .filter((rawPath) => {
+        const normalized = rawPath.replace(/\\/g, '/').trim();
+        if (/\.env\.example$/i.test(normalized)) {
+          return false;
+        }
+        return PROTECTED_FILE_PATTERNS.some((pattern) =>
+          pattern.test(normalized)
+        );
+      });
   }
 
   /**
@@ -186,6 +212,15 @@ export class SecurityGate {
     taskId: string,
     fileDiffs: FileDiff[]
   ): Promise<{ approved: boolean; rejectedBy?: ApprovalTrigger; note?: string }> {
+    const protectedViolations = this.detectProtectedFileViolations(fileDiffs);
+    if (protectedViolations.length > 0) {
+      return {
+        approved: false,
+        rejectedBy: 'FILE_DELETE',
+        note: `Blocked by Protected File Guard: AI agents cannot modify sensitive path(s): ${protectedViolations.join(', ')}`,
+      };
+    }
+
     const triggers = this.detectDiffTriggers(fileDiffs);
 
     for (const item of triggers) {
