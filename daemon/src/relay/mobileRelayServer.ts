@@ -51,6 +51,9 @@ export type RelayInboundMessage =
   | {
       type: 'SET_ENGINE_MODE';
       engineMode: EngineMode;
+    }
+  | {
+      type: 'ABORT_TASK';
     };
 
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
@@ -342,6 +345,13 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'POST' && cleanPath === '/api/abort') {
+      this.engine.abortActiveTask();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ aborted: true }));
+      return;
+    }
+
     if (req.method === 'POST' && cleanPath === '/api/approval') {
       let body = '';
       req.on('data', (chunk: Buffer) => {
@@ -472,6 +482,11 @@ export class MobileRelayServer {
     if (msg.type === 'SET_ENGINE_MODE') {
       const updated = this.engine.setEngineMode(msg.engineMode);
       this.broadcast({ type: 'CONFIG_UPDATED', payload: updated });
+      return;
+    }
+
+    if (msg.type === 'ABORT_TASK') {
+      this.engine.abortActiveTask();
       return;
     }
 

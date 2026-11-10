@@ -100,6 +100,13 @@ class MegaXRelayService {
     );
   }
 
+  void abortActiveTask() {
+    final socket = _socket;
+    if (socket == null) return;
+
+    socket.add(jsonEncode({'type': 'ABORT_TASK'}));
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

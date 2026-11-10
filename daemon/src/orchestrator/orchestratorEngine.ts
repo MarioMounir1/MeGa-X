@@ -64,6 +64,7 @@ export class OrchestratorEngine {
   private readonly securityGate: SecurityGate;
   private readonly verificationRunner: VerificationRunner;
   private stateListener?: StateChangeListener;
+  private abortRequested = false;
 
   constructor(options: OrchestratorOptions) {
     this.workspaceRoot = options.workspaceRoot;
@@ -113,6 +114,14 @@ export class OrchestratorEngine {
       engineMode,
     };
     return this.getConfig();
+  }
+
+  /**
+   * Emergency Kill-Switch: Aborts the active task and kills any running verification child process.
+   */
+  public abortActiveTask(): void {
+    this.abortRequested = true;
+    this.verificationRunner.abortActiveProcess();
   }
 
   public getAgentRegistry(): AgentRegistry {
@@ -236,6 +245,7 @@ export class OrchestratorEngine {
     );
     const maxAttempts = this.config.verification.maxFixAttempts;
     const isGitRepo = this.gitManager.isGitRepository();
+    this.abortRequested = false;
 
     const baseBranch = isGitRepo ? this.gitManager.getCurrentBranch() : 'main';
     const branchName = isGitRepo
@@ -326,6 +336,36 @@ export class OrchestratorEngine {
         taskId,
         attempt
       );
+
+      if (this.abortRequested) {
+        this.emitState(
+          taskId,
+          'ROLLING_BACK',
+          attempt,
+          'Emergency abort triggered by user. Executing hard Git rollback.'
+        );
+        if (isGitRepo) {
+          this.gitManager.hardRollback({
+            returnBranch: baseBranch,
+            deleteTaskBranch: branchName,
+          });
+        }
+        this.emitState(
+          taskId,
+          'FAILED',
+          attempt,
+          'Task aborted via Mobile Kill-Switch.'
+        );
+        return {
+          taskId,
+          prompt,
+          branchName,
+          status: 'ROLLED_BACK',
+          attemptsUsed: attempt,
+          failureReason: 'Aborted by user via Mobile Kill-Switch',
+          lastErrorLog: verification.errorLog,
+        };
+      }
 
       if (!verification.passed) {
         lastErrorLog = verification.errorLog;

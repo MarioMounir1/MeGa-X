@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { ChildProcess, execFileSync, spawn } from 'child_process';
 import {
   TerminalStreamEvent,
   VerificationConfig,
@@ -27,6 +27,7 @@ export class VerificationRunner {
   private readonly workspaceRoot: string;
   private readonly config: VerificationConfig;
   private streamListener?: TerminalStreamListener;
+  private activeChild?: ChildProcess;
 
   constructor(
     workspaceRoot: string,
@@ -40,6 +41,35 @@ export class VerificationRunner {
 
   public setStreamListener(listener: TerminalStreamListener): void {
     this.streamListener = listener;
+  }
+
+  /**
+   * Immediately terminates any currently running verification child process (and its process tree).
+   */
+  public abortActiveProcess(): boolean {
+    if (!this.activeChild || this.activeChild.killed) {
+      return false;
+    }
+    try {
+      if (process.platform === 'win32' && this.activeChild.pid) {
+        execFileSync('taskkill', [
+          '/pid',
+          String(this.activeChild.pid),
+          '/T',
+          '/F',
+        ], { stdio: 'ignore' });
+      } else {
+        this.activeChild.kill('SIGTERM');
+      }
+      return true;
+    } catch {
+      try {
+        this.activeChild.kill();
+      } catch {
+        // Ignore
+      }
+      return false;
+    }
   }
 
   private emitStream(
@@ -83,6 +113,7 @@ export class VerificationRunner {
         shell: true,
         env: { ...process.env, FORCE_COLOR: '0' },
       });
+      this.activeChild = child;
 
       let stdout = '';
       let stderr = '';
@@ -114,6 +145,9 @@ export class VerificationRunner {
       });
 
       child.on('close', (code: number | null) => {
+        if (this.activeChild === child) {
+          this.activeChild = undefined;
+        }
         const exitCode = code ?? 1;
         const durationMs = Date.now() - startTime;
         const passed = exitCode === 0;
