@@ -166,6 +166,22 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<GitCommitEntry>> fetchRecentCommits() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/commits'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['commits'] as List<dynamic>?)
+              ?.map((e) => GitCommitEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

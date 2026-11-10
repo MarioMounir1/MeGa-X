@@ -160,3 +160,26 @@ class GitDiffSnapshot {
   }
 }
 
+class GitCommitEntry {
+  final String hash;
+  final String subject;
+  final String author;
+  final String date;
+
+  const GitCommitEntry({
+    required this.hash,
+    required this.subject,
+    required this.author,
+    required this.date,
+  });
+
+  factory GitCommitEntry.fromJson(Map<String, dynamic> json) {
+    return GitCommitEntry(
+      hash: json['hash'] as String? ?? '',
+      subject: json['subject'] as String? ?? '',
+      author: json['author'] as String? ?? '',
+      date: json['date'] as String? ?? '',
+    );
+  }
+}
+

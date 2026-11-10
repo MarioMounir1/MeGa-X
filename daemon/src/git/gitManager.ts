@@ -62,6 +62,14 @@ export class GitManager {
   }
 
   /**
+   * Checks out an existing local branch by name.
+   */
+  public checkoutBranch(branchName: string): string {
+    this.runGit(['checkout', branchName.trim()]);
+    return this.getCurrentBranch();
+  }
+
+  /**
    * Sanitizes a taskId into a valid branch suffix (`megax/<task-id>`).
    */
   public static formatTaskBranchName(taskId: string): string {
