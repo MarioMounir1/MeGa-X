@@ -247,7 +247,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 4. High-Level Feature Prompt Input
+            // 4. High-Level Feature Prompt Input & Emergency Kill-Switch
             Row(
               children: [
                 Expanded(
@@ -264,7 +264,15 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                 const SizedBox(width: 8),
                 IconButton.filled(
                   onPressed: _connected ? _dispatchPrompt : null,
+                  tooltip: 'Dispatch Prompt',
                   icon: const Icon(Icons.send),
+                ),
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  onPressed: _connected ? () => _relay.abortActiveTask() : null,
+                  tooltip: 'Emergency Kill-Switch (Abort & Hard Rollback)',
+                  icon: const Icon(Icons.stop_circle_outlined,
+                      color: Color(0xFFF85149)),
                 ),
               ],
             ),

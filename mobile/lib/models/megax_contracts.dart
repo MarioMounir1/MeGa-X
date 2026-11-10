@@ -106,3 +106,33 @@ class ApprovalDecisionPayload {
       };
 }
 
+class DaemonMetricsSummary {
+  final int totalRuns;
+  final int successfulRuns;
+  final int successRatePercent;
+  final int firstAttemptPasses;
+  final int selfHealedPasses;
+  final int rolledBackMicroTasks;
+
+  const DaemonMetricsSummary({
+    required this.totalRuns,
+    required this.successfulRuns,
+    required this.successRatePercent,
+    required this.firstAttemptPasses,
+    required this.selfHealedPasses,
+    required this.rolledBackMicroTasks,
+  });
+
+  factory DaemonMetricsSummary.fromJson(Map<String, dynamic> json) {
+    return DaemonMetricsSummary(
+      totalRuns: (json['totalRuns'] as num?)?.toInt() ?? 0,
+      successfulRuns: (json['successfulRuns'] as num?)?.toInt() ?? 0,
+      successRatePercent: (json['successRatePercent'] as num?)?.toInt() ?? 100,
+      firstAttemptPasses: (json['firstAttemptPasses'] as num?)?.toInt() ?? 0,
+      selfHealedPasses: (json['selfHealedPasses'] as num?)?.toInt() ?? 0,
+      rolledBackMicroTasks:
+          (json['rolledBackMicroTasks'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+

@@ -20,6 +20,37 @@ Respond ONLY with a valid JSON object matching this exact TypeScript schema:
   "microTasks": ["optional array of strings when planning"]
 }`;
 
+export interface BackoffOptions {
+  maxRetries?: number;
+  baseDelayMs?: number;
+}
+
+/**
+ * Executes an async LLM API call with exponential backoff for transient rate-limit (429) or 5xx errors.
+ */
+export async function withExponentialBackoff<T>(
+  operation: () => Promise<T>,
+  options: BackoffOptions = {}
+): Promise<T> {
+  const maxRetries = options.maxRetries ?? 2;
+  const baseDelayMs = options.baseDelayMs ?? 100;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err;
+      if (attempt === maxRetries) {
+        break;
+      }
+      const delay = baseDelayMs * Math.pow(2, attempt);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+}
+
 /**
  * Extracts and parses a JSON AgentResponse from raw LLM text output (handling markdown code fences if present).
  */
