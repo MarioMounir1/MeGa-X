@@ -35,6 +35,8 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/prompt` | `POST` | Enqueue a high-level feature prompt into the FIFO `TaskQueueManager` |
 | `/api/approvals` | `GET` | List full payloads of all pending `SecurityGate` approvals |
 | `/api/approval` | `POST` | Resolve a pending `SecurityGate` approval (`DB_MIGRATION`, `FILE_DELETE`, `MAX_RETRY_EXCEEDED`) |
+| `/api/fcm/history` | `GET` | Bounded log of dispatched Firebase Cloud Messaging (FCM) notifications |
+| `/api/fcm/test` | `POST` | Dispatch a diagnostic test FCM push notification from mobile |
 | `/api/abort` | `POST` | Emergency Kill-Switch: terminates active child process & triggers hard Git rollback |
 | `/api/merge` | `POST` | Merges a verified `megax/<task-id>` branch into `main` and deletes the temporary branch |
 | `/api/diff` | `GET` | Live working-tree status lines and unified Git diff (`git diff HEAD`) |
@@ -64,7 +66,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 38 automated test suites
+npm test          # Runs all 39 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 ```

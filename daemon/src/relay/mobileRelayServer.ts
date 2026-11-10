@@ -84,6 +84,9 @@ export class MobileRelayServer {
   >();
   private readonly streamThrottler: TerminalStreamThrottler;
   private readonly taskQueue: TaskQueueManager;
+  private readonly fcmHistory: Array<
+    FcmNotificationPayload & { dispatchedAt: string }
+  > = [];
 
   constructor(
     engine: OrchestratorEngine,
@@ -115,6 +118,26 @@ export class MobileRelayServer {
   }
 
   /**
+   * Records an FCM notification in the bounded relay log and invokes fcmSender if configured.
+   */
+  public async dispatchFcmNotification(
+    notification: FcmNotificationPayload
+  ): Promise<FcmNotificationPayload & { dispatchedAt: string }> {
+    const entry = {
+      ...notification,
+      dispatchedAt: new Date().toISOString(),
+    };
+    this.fcmHistory.push(entry);
+    if (this.fcmHistory.length > 50) {
+      this.fcmHistory.shift();
+    }
+    if (this.fcmSender) {
+      await this.fcmSender(notification);
+    }
+    return entry;
+  }
+
+  /**
    * Dispatches an interactive FCM push notification and broadcasts APPROVAL_REQUIRED
    * over WebSockets, pausing orchestration until the mobile user responds.
    */
@@ -123,19 +146,17 @@ export class MobileRelayServer {
   ): Promise<ApprovalDecisionPayload> {
     this.broadcast({ type: 'APPROVAL_REQUIRED', payload: request });
 
-    if (this.fcmSender) {
-      await this.fcmSender({
-        title: `⚠️ MeGa X Security Gate: ${request.trigger}`,
-        body: request.summary,
-        data: {
-          approvalId: request.approvalId,
-          taskId: request.taskId,
-          trigger: request.trigger,
-          affectedFiles: JSON.stringify(request.affectedFiles),
-          actions: JSON.stringify(['APPROVE', 'ROLLBACK']),
-        },
-      });
-    }
+    await this.dispatchFcmNotification({
+      title: `⚠️ MeGa X Security Gate: ${request.trigger}`,
+      body: request.summary,
+      data: {
+        approvalId: request.approvalId,
+        taskId: request.taskId,
+        trigger: request.trigger,
+        affectedFiles: JSON.stringify(request.affectedFiles),
+        actions: JSON.stringify(['APPROVE', 'ROLLBACK']),
+      },
+    });
 
     return new Promise<ApprovalDecisionPayload>((resolve) => {
       this.pendingApprovals.set(request.approvalId, {
@@ -789,6 +810,64 @@ export class MobileRelayServer {
             })
           );
         });
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/fcm/history') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          notifications: [...this.fcmHistory],
+          totalCount: this.fcmHistory.length,
+          fcmConfigured: Boolean(this.fcmSender),
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/fcm/test') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        void (async () => {
+          try {
+            const parsed =
+              body.trim().length > 0
+                ? (JSON.parse(body) as { title?: string; body?: string })
+                : {};
+            const dispatched = await this.dispatchFcmNotification({
+              title: parsed.title ?? '📲 MeGa X Test Push Notification',
+              body:
+                parsed.body ??
+                'Interactive FCM push pipeline is connected and operational.',
+              data: {
+                approvalId: `test_fcm_${Date.now() % 10000}`,
+                taskId: 'diagnostic_test',
+                trigger: 'DIAGNOSTIC_TEST',
+                affectedFiles: JSON.stringify([]),
+                actions: JSON.stringify(['APPROVE', 'ROLLBACK']),
+              },
+            });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(
+              JSON.stringify({
+                dispatched: true,
+                notification: dispatched,
+              })
+            );
+          } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(
+              JSON.stringify({
+                error:
+                  err instanceof Error ? err.message : 'FCM test push failed',
+              })
+            );
+          }
+        })();
+      });
       return;
     }
 

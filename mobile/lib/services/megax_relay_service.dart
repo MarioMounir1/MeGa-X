@@ -471,6 +471,40 @@ class MegaXRelayService {
     }
   }
 
+  Future<bool> sendTestFcmPush({String? title, String? body}) async {
+    final client = HttpClient();
+    try {
+      final req = await client.postUrl(Uri.parse('$_httpBaseUrl/api/fcm/test'));
+      req.headers.contentType = ContentType.json;
+      req.write(
+        jsonEncode({
+          if (title != null) 'title': title,
+          if (body != null) 'body': body,
+        }),
+      );
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded['dispatched'] as bool? ?? false;
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<int> fetchFcmHistoryCount() async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.getUrl(Uri.parse('$_httpBaseUrl/api/fcm/history'));
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return (decoded['totalCount'] as num?)?.toInt() ?? 0;
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;
