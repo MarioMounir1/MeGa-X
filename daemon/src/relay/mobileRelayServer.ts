@@ -13,6 +13,7 @@ import {
   MegaXConfig,
   TerminalStreamEvent,
 } from '../types/contracts';
+import { TunnelInspector } from './tunnelInspector';
 
 export interface FcmNotificationPayload {
   title: string;
@@ -260,6 +261,18 @@ export class MobileRelayServer {
           connectedClients: this.clients.size,
           pendingApprovals: Array.from(this.pendingApprovals.keys()),
         })
+      );
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/pairing') {
+      const addr = this.server?.address();
+      const activePort = addr && typeof addr === 'object' ? addr.port : 4040;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify(
+          TunnelInspector.getPairingInfo(activePort, Boolean(this.relaySecretToken))
+        )
       );
       return;
     }
