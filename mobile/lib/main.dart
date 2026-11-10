@@ -48,6 +48,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
   GitDiffSnapshot? _diffSnapshot;
   List<String> _taskBranches = const [];
   List<QueuedTaskSummary> _queueSnapshot = const [];
+  List<AuditHistoryEntry> _auditHistory = const [];
   String _currentTaskState = 'IDLE';
   String _engineMode = 'SINGLE_AGENT';
   bool _connected = false;
@@ -100,12 +101,14 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
       final diff = await _relay.fetchDiff();
       final branches = await _relay.fetchTaskBranches();
       final queue = await _relay.fetchQueue();
+      final history = await _relay.fetchAuditHistory(limit: 5);
       if (!mounted) return;
       setState(() {
         _metrics = metrics;
         _diffSnapshot = diff;
         _taskBranches = branches;
         _queueSnapshot = queue;
+        _auditHistory = history;
       });
     } catch (_) {
       // Ignore transient telemetry polling errors
@@ -452,6 +455,47 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                                             child: const Text('Cancel'),
                                           )
                                         : null,
+                                  ),
+                                const Divider(height: 20),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Recent Audit History',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    TextButton(
+                                      onPressed: _connected
+                                          ? () async {
+                                              await _relay.clearAuditHistory();
+                                              await _refreshTelemetry();
+                                            }
+                                          : null,
+                                      child: const Text('Clear History'),
+                                    ),
+                                  ],
+                                ),
+                                for (final h in _auditHistory)
+                                  ListTile(
+                                    dense: true,
+                                    leading: Icon(
+                                      h.overallSuccess
+                                          ? Icons.check_circle_outline
+                                          : Icons.error_outline,
+                                      color: h.overallSuccess
+                                          ? const Color(0xFF3FB950)
+                                          : const Color(0xFFF85149),
+                                      size: 18,
+                                    ),
+                                    title: Text(
+                                        '${h.masterTaskId} (${h.engineMode})'),
+                                    subtitle: Text(
+                                      h.prompt,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                               ],
                             ),

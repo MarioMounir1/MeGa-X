@@ -252,3 +252,29 @@ class QueuedTaskSummary {
   }
 }
 
+class AuditHistoryEntry {
+  final String masterTaskId;
+  final String prompt;
+  final String engineMode;
+  final bool overallSuccess;
+  final String recordedAt;
+
+  const AuditHistoryEntry({
+    required this.masterTaskId,
+    required this.prompt,
+    required this.engineMode,
+    required this.overallSuccess,
+    required this.recordedAt,
+  });
+
+  factory AuditHistoryEntry.fromJson(Map<String, dynamic> json) {
+    return AuditHistoryEntry(
+      masterTaskId: json['masterTaskId'] as String? ?? '',
+      prompt: json['prompt'] as String? ?? '',
+      engineMode: json['engineMode'] as String? ?? 'SINGLE_AGENT',
+      overallSuccess: json['overallSuccess'] as bool? ?? false,
+      recordedAt: json['recordedAt'] as String? ?? '',
+    );
+  }
+}
+

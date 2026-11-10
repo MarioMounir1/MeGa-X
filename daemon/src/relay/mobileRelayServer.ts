@@ -298,10 +298,38 @@ export class MobileRelayServer {
     }
 
     if (req.method === 'GET' && cleanPath === '/api/history') {
+      const parsedUrl = new URL(req.url ?? '/api/history', 'http://localhost');
+      const rawStatus = parsedUrl.searchParams.get('status')?.toUpperCase();
+      const status =
+        rawStatus === 'SUCCESS' || rawStatus === 'FAILED'
+          ? rawStatus
+          : undefined;
+      const rawLimit = parsedUrl.searchParams.get('limit');
+      const limit = rawLimit ? Number.parseInt(rawLimit, 10) : undefined;
+      const taskId = parsedUrl.searchParams.get('taskId') ?? undefined;
+
+      const history = this.engine.getAuditStore().queryHistory({
+        status,
+        limit,
+        taskId,
+      });
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({
-          history: this.engine.getAuditStore().readAll(),
+          history,
+          totalCount: history.length,
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/history/clear') {
+      const clearedCount = this.engine.getAuditStore().clearHistory();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          clearedCount,
         })
       );
       return;

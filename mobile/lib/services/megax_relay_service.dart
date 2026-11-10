@@ -309,6 +309,50 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<AuditHistoryEntry>> fetchAuditHistory({
+    String? status,
+    int? limit,
+  }) async {
+    final client = HttpClient();
+    try {
+      final queryParams = <String, String>{};
+      if (status != null && status.isNotEmpty) {
+        queryParams['status'] = status;
+      }
+      if (limit != null && limit > 0) {
+        queryParams['limit'] = limit.toString();
+      }
+      final uri = Uri.parse('$_httpBaseUrl/api/history').replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['history'] as List<dynamic>?)
+              ?.map(
+                  (e) => AuditHistoryEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<int> clearAuditHistory() async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.postUrl(Uri.parse('$_httpBaseUrl/api/history/clear'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['clearedCount'] as num?)?.toInt() ?? 0;
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;
