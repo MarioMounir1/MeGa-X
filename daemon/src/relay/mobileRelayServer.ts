@@ -520,6 +520,11 @@ export class MobileRelayServer {
     this.clients.add(socket);
 
     socket.on('data', (buffer: Buffer) => {
+      if (buffer.length >= 2 && (buffer[0] & 0x0f) === 0x09) {
+        // Respond to RFC-6455 Ping (0x09) with Pong (0x8A)
+        socket.write(MobileRelayServer.encodeWsPongFrame());
+        return;
+      }
       const text = MobileRelayServer.decodeWsTextFrame(buffer);
       if (!text) {
         return;
@@ -564,6 +569,13 @@ export class MobileRelayServer {
         msg.contextFiles ?? []
       );
     }
+  }
+
+  /**
+   * Encodes an RFC-6455 WebSocket Pong frame (opcode 0x8A) for tunnel keep-alive.
+   */
+  public static encodeWsPongFrame(): Buffer {
+    return Buffer.from([0x8a, 0x00]);
   }
 
   /**

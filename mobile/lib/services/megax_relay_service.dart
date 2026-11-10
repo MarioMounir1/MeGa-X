@@ -7,6 +7,7 @@ import '../models/megax_contracts.dart';
 /// the Flutter Mobile Controller to the Local PC Daemon (`ws://<host>:<port>/ws`).
 class MegaXRelayService {
   WebSocket? _socket;
+  String _httpBaseUrl = 'http://10.0.2.2:4040';
 
   final _terminalController = StreamController<TerminalStreamEvent>.broadcast();
   final _stateController = StreamController<TaskStateChangeEvent>.broadcast();
@@ -24,6 +25,10 @@ class MegaXRelayService {
 
   Future<void> connect(String wsUrl) async {
     await disconnect();
+    _httpBaseUrl = wsUrl
+        .replaceFirst(RegExp(r'^wss://'), 'https://')
+        .replaceFirst(RegExp(r'^ws://'), 'http://')
+        .replaceFirst(RegExp(r'/ws$'), '');
     final socket = await WebSocket.connect(wsUrl);
     _socket = socket;
     _connectionController.add(true);
@@ -105,6 +110,60 @@ class MegaXRelayService {
     if (socket == null) return;
 
     socket.add(jsonEncode({'type': 'ABORT_TASK'}));
+  }
+
+  Future<DaemonMetricsSummary> fetchMetrics() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/metrics'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      return DaemonMetricsSummary.fromJson(
+          jsonDecode(body) as Map<String, dynamic>);
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<GitDiffSnapshot> fetchDiff() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/diff'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      return GitDiffSnapshot.fromJson(
+          jsonDecode(body) as Map<String, dynamic>);
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<List<String>> fetchTaskBranches() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/branches'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['taskBranches'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<void> mergeTaskBranch(String taskBranch) async {
+    final client = HttpClient();
+    try {
+      final req = await client.postUrl(Uri.parse('$_httpBaseUrl/api/merge'));
+      req.headers.contentType = ContentType.json;
+      req.write(jsonEncode({'taskBranch': taskBranch, 'targetBranch': 'main'}));
+      await req.close();
+    } finally {
+      client.close();
+    }
   }
 
   Future<void> disconnect() async {

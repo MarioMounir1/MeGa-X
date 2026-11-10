@@ -136,3 +136,27 @@ class DaemonMetricsSummary {
   }
 }
 
+class GitDiffSnapshot {
+  final String currentBranch;
+  final List<String> statusLines;
+  final String unifiedDiff;
+
+  const GitDiffSnapshot({
+    required this.currentBranch,
+    required this.statusLines,
+    required this.unifiedDiff,
+  });
+
+  factory GitDiffSnapshot.fromJson(Map<String, dynamic> json) {
+    final lines = (json['statusLines'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [];
+    return GitDiffSnapshot(
+      currentBranch: json['currentBranch'] as String? ?? 'main',
+      statusLines: lines,
+      unifiedDiff: json['unifiedDiff'] as String? ?? '',
+    );
+  }
+}
+

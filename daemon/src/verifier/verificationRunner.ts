@@ -28,15 +28,22 @@ export class VerificationRunner {
   private readonly config: VerificationConfig;
   private streamListener?: TerminalStreamListener;
   private activeChild?: ChildProcess;
+  private commandTimeoutMs: number;
 
   constructor(
     workspaceRoot: string,
     config: VerificationConfig,
-    streamListener?: TerminalStreamListener
+    streamListener?: TerminalStreamListener,
+    commandTimeoutMs = 120_000
   ) {
     this.workspaceRoot = workspaceRoot;
     this.config = config;
     this.streamListener = streamListener;
+    this.commandTimeoutMs = commandTimeoutMs;
+  }
+
+  public setCommandTimeoutMs(timeoutMs: number): void {
+    this.commandTimeoutMs = timeoutMs;
   }
 
   public setStreamListener(listener: TerminalStreamListener): void {
@@ -117,6 +124,18 @@ export class VerificationRunner {
 
       let stdout = '';
       let stderr = '';
+      let timedOut = false;
+
+      const watchdog =
+        this.commandTimeoutMs > 0
+          ? setTimeout(() => {
+              timedOut = true;
+              const timeoutMsg = `\n[Watchdog Timeout] Command "${command}" exceeded ${this.commandTimeoutMs}ms limit and was terminated.\n`;
+              stderr += timeoutMsg;
+              this.emitStream(taskId, 'stderr', timeoutMsg, attempt);
+              this.abortActiveProcess();
+            }, this.commandTimeoutMs)
+          : null;
 
       child.stdout?.on('data', (chunk: Buffer) => {
         const text = chunk.toString('utf-8');
@@ -145,12 +164,15 @@ export class VerificationRunner {
       });
 
       child.on('close', (code: number | null) => {
+        if (watchdog) {
+          clearTimeout(watchdog);
+        }
         if (this.activeChild === child) {
           this.activeChild = undefined;
         }
-        const exitCode = code ?? 1;
+        const exitCode = timedOut ? 124 : code ?? 1;
         const durationMs = Date.now() - startTime;
-        const passed = exitCode === 0;
+        const passed = !timedOut && exitCode === 0;
 
         this.emitStream(
           taskId,
