@@ -103,6 +103,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
       final branches = await _relay.fetchTaskBranches();
       final queue = await _relay.fetchQueue();
       final history = await _relay.fetchAuditHistory(limit: 5);
+      final approvals = await _relay.fetchPendingApprovals();
       if (!mounted) return;
       setState(() {
         _metrics = metrics;
@@ -110,6 +111,9 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
         _taskBranches = branches;
         _queueSnapshot = queue;
         _auditHistory = history;
+        if (_pendingApproval == null && approvals.isNotEmpty) {
+          _pendingApproval = approvals.first;
+        }
       });
     } catch (_) {
       // Ignore transient telemetry polling errors

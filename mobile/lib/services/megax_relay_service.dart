@@ -401,6 +401,24 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<ApprovalRequestPayload>> fetchPendingApprovals() async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.getUrl(Uri.parse('$_httpBaseUrl/api/approvals'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['pendingApprovals'] as List<dynamic>?)
+              ?.map((e) =>
+                  ApprovalRequestPayload.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

@@ -77,7 +77,10 @@ export class MobileRelayServer {
   private readonly clients = new Set<Duplex>();
   private readonly pendingApprovals = new Map<
     string,
-    (decision: ApprovalDecisionPayload) => void
+    {
+      request: ApprovalRequestPayload;
+      resolve: (decision: ApprovalDecisionPayload) => void;
+    }
   >();
   private readonly streamThrottler: TerminalStreamThrottler;
   private readonly taskQueue: TaskQueueManager;
@@ -135,20 +138,34 @@ export class MobileRelayServer {
     }
 
     return new Promise<ApprovalDecisionPayload>((resolve) => {
-      this.pendingApprovals.set(request.approvalId, resolve);
+      this.pendingApprovals.set(request.approvalId, {
+        request,
+        resolve,
+      });
     });
+  }
+
+  /**
+   * Returns all currently waiting ApprovalRequestPayloads so reconnecting mobile clients
+   * can inspect and resolve pending security gates.
+   */
+  public getPendingApprovalPayloads(): ApprovalRequestPayload[] {
+    return Array.from(this.pendingApprovals.values()).map((entry) => ({
+      ...entry.request,
+      affectedFiles: [...entry.request.affectedFiles],
+    }));
   }
 
   /**
    * Resolves a pending approval gate from either WebSocket or HTTP FCM webhook.
    */
   public submitApprovalDecision(decision: ApprovalDecisionPayload): boolean {
-    const resolver = this.pendingApprovals.get(decision.approvalId);
-    if (!resolver) {
+    const entry = this.pendingApprovals.get(decision.approvalId);
+    if (!entry) {
       return false;
     }
     this.pendingApprovals.delete(decision.approvalId);
-    resolver(decision);
+    entry.resolve(decision);
     return true;
   }
 
@@ -761,6 +778,18 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/approvals') {
+      const pendingApprovals = this.getPendingApprovalPayloads();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          pendingApprovals,
+          totalCount: pendingApprovals.length,
+        })
+      );
+      return;
+    }
+
     if (req.method === 'POST' && cleanPath === '/api/approval') {
       let body = '';
       req.on('data', (chunk: Buffer) => {
@@ -853,6 +882,19 @@ export class MobileRelayServer {
 
     socket.write(headers.join('\r\n'));
     this.clients.add(socket);
+
+    // Replay any active pending security approval gates immediately upon mobile reconnect
+    for (const pending of this.pendingApprovals.values()) {
+      const replayFrame = MobileRelayServer.encodeWsTextFrame(
+        JSON.stringify({
+          type: 'APPROVAL_REQUIRED',
+          payload: pending.request,
+        } satisfies RelayOutboundMessage)
+      );
+      if (!socket.destroyed) {
+        socket.write(replayFrame);
+      }
+    }
 
     socket.on('data', (buffer: Buffer) => {
       if (buffer.length >= 2 && (buffer[0] & 0x0f) === 0x09) {
