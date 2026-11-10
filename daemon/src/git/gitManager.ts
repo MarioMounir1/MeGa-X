@@ -220,5 +220,50 @@ export class GitManager {
   public getBranchDiff(taskBranch: string, baseBranch = 'main'): string {
     return this.runGit(['diff', `${baseBranch}...${taskBranch}`]);
   }
+
+  /**
+   * Lists all local `megax/*` task branches in the repository.
+   */
+  public listTaskBranches(): string[] {
+    if (!this.isGitRepository()) {
+      return [];
+    }
+    const raw = this.runGit(['branch', '--list', 'megax/*']);
+    return raw
+      .split('\n')
+      .map((line) => line.replace(/^\*?\s+/, '').trim())
+      .filter(Boolean);
+  }
+
+  /**
+   * Stashes any uncommitted manual edits (excluding `.megax`) before switching to a task branch.
+   * Returns true if a stash entry was created.
+   */
+  public stashUncommittedChanges(label = 'megax-preflight'): boolean {
+    if (!this.isGitRepository()) {
+      return false;
+    }
+    const { statusLines } = this.getWorkingTreeDiff();
+    if (statusLines.length === 0) {
+      return false;
+    }
+    this.runGit([
+      'stash',
+      'push',
+      '--include-untracked',
+      '-m',
+      label,
+      '--',
+      ':!.megax',
+    ]);
+    return true;
+  }
+
+  /**
+   * Restores the most recent Git stash entry onto the working tree.
+   */
+  public popLastStash(): void {
+    this.runGit(['stash', 'pop']);
+  }
 }
 

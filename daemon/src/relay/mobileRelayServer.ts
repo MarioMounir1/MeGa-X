@@ -325,6 +325,20 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/branches') {
+      const git = this.engine.getGitManager();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          currentBranch: git.isGitRepository()
+            ? git.getCurrentBranch()
+            : 'no-git',
+          taskBranches: git.listTaskBranches(),
+        })
+      );
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/config') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(this.engine.getConfig()));
