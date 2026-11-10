@@ -183,3 +183,49 @@ class GitCommitEntry {
   }
 }
 
+class WorkspaceFileEntry {
+  final String path;
+  final int sizeBytes;
+  final String extension;
+  final String modifiedAt;
+
+  const WorkspaceFileEntry({
+    required this.path,
+    required this.sizeBytes,
+    required this.extension,
+    required this.modifiedAt,
+  });
+
+  factory WorkspaceFileEntry.fromJson(Map<String, dynamic> json) {
+    return WorkspaceFileEntry(
+      path: json['path'] as String? ?? '',
+      sizeBytes: (json['sizeBytes'] as num?)?.toInt() ?? 0,
+      extension: json['extension'] as String? ?? '',
+      modifiedAt: json['modifiedAt'] as String? ?? '',
+    );
+  }
+}
+
+class WorkspaceFileContent {
+  final String path;
+  final String content;
+  final int sizeBytes;
+  final int lineCount;
+
+  const WorkspaceFileContent({
+    required this.path,
+    required this.content,
+    required this.sizeBytes,
+    required this.lineCount,
+  });
+
+  factory WorkspaceFileContent.fromJson(Map<String, dynamic> json) {
+    return WorkspaceFileContent(
+      path: json['path'] as String? ?? '',
+      content: json['content'] as String? ?? '',
+      sizeBytes: (json['sizeBytes'] as num?)?.toInt() ?? 0,
+      lineCount: (json['lineCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+

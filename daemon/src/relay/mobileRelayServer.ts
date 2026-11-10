@@ -1,4 +1,5 @@
 import * as crypto from 'crypto';
+import * as fs from 'fs';
 import * as http from 'http';
 import { Duplex } from 'stream';
 import { validateMegaXConfig } from '../config/configLoader';
@@ -365,6 +366,82 @@ export class MobileRelayServer {
           commits: git.getRecentCommits(10),
         })
       );
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/files') {
+      const parsedUrl = new URL(req.url ?? '/api/files', 'http://localhost');
+      const query = parsedUrl.searchParams.get('query') ?? undefined;
+      const files = this.engine
+        .getWorkspaceScanner()
+        .listWorkspaceFileEntries(query);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          files,
+          totalCount: files.length,
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/file') {
+      const parsedUrl = new URL(req.url ?? '/api/file', 'http://localhost');
+      const relativePath = (parsedUrl.searchParams.get('path') ?? '').trim();
+      if (!relativePath) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Query parameter "path" is required' }));
+        return;
+      }
+
+      const protectedViolations = this.engine
+        .getSecurityGate()
+        .detectProtectedFileViolations([
+          { path: relativePath, action: 'UPDATE', content: '' },
+        ]);
+
+      if (protectedViolations.length > 0) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error: `Access denied to protected file: "${relativePath}"`,
+          })
+        );
+        return;
+      }
+
+      try {
+        const targetPath = this.engine
+          .getFilePatcher()
+          .resolveSafePath(relativePath);
+        if (!fs.existsSync(targetPath) || !fs.statSync(targetPath).isFile()) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({ error: `File not found: "${relativePath}"` })
+          );
+          return;
+        }
+        const content = fs.readFileSync(targetPath, 'utf-8');
+        const sizeBytes = Buffer.byteLength(content, 'utf-8');
+        const lineCount = content === '' ? 0 : content.split(/\r?\n/).length;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            path: relativePath.replace(/\\/g, '/'),
+            content,
+            sizeBytes,
+            lineCount,
+          })
+        );
+      } catch (err) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error:
+              err instanceof Error ? err.message : 'Invalid file path requested',
+          })
+        );
+      }
       return;
     }
 

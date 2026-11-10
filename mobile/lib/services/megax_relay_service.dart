@@ -195,6 +195,42 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<WorkspaceFileEntry>> fetchWorkspaceFiles({String? query}) async {
+    final client = HttpClient();
+    try {
+      final uri = Uri.parse('$_httpBaseUrl/api/files').replace(
+        queryParameters:
+            (query != null && query.trim().isNotEmpty) ? {'query': query} : null,
+      );
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['files'] as List<dynamic>?)
+              ?.map((e) =>
+                  WorkspaceFileEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<WorkspaceFileContent> fetchFileContent(String relativePath) async {
+    final client = HttpClient();
+    try {
+      final uri = Uri.parse('$_httpBaseUrl/api/file')
+          .replace(queryParameters: {'path': relativePath});
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      return WorkspaceFileContent.fromJson(
+          jsonDecode(body) as Map<String, dynamic>);
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

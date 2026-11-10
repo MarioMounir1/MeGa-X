@@ -42,6 +42,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
   final TextEditingController _promptController = TextEditingController();
 
   final List<TerminalStreamEvent> _terminalLogs = [];
+  final Set<String> _pinnedContextFiles = {};
   ApprovalRequestPayload? _pendingApproval;
   DaemonMetricsSummary? _metrics;
   GitDiffSnapshot? _diffSnapshot;
@@ -113,8 +114,51 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
     if (text.isEmpty) return;
 
     final taskId = 'task_${DateTime.now().millisecondsSinceEpoch % 100000}';
-    _relay.submitPrompt(taskId: taskId, prompt: text);
+    _relay.submitPrompt(
+      taskId: taskId,
+      prompt: text,
+      contextFiles: _pinnedContextFiles.toList(),
+    );
     _promptController.clear();
+  }
+
+  Future<void> _openWorkspaceFilePicker() async {
+    if (!_connected) return;
+    final files = await _relay.fetchWorkspaceFiles();
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return ListView.builder(
+              itemCount: files.length,
+              itemBuilder: (_, idx) {
+                final entry = files[idx];
+                final pinned = _pinnedContextFiles.contains(entry.path);
+                return CheckboxListTile(
+                  value: pinned,
+                  title: Text(entry.path,
+                      style: const TextStyle(
+                          fontFamily: 'monospace', fontSize: 13)),
+                  subtitle: Text('${entry.sizeBytes} bytes'),
+                  onChanged: (checked) {
+                    setState(() {
+                      if (checked == true) {
+                        _pinnedContextFiles.add(entry.path);
+                      } else {
+                        _pinnedContextFiles.remove(entry.path);
+                      }
+                    });
+                    setSheetState(() {});
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   void _handleApproval(bool approved) {
@@ -364,8 +408,31 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
             const SizedBox(height: 12),
 
             // 4. High-Level Feature Prompt Input & Emergency Kill-Switch
+            if (_pinnedContextFiles.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: _pinnedContextFiles
+                      .map(
+                        (p) => InputChip(
+                          label: Text(p, style: const TextStyle(fontSize: 11)),
+                          onDeleted: () =>
+                              setState(() => _pinnedContextFiles.remove(p)),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
             Row(
               children: [
+                IconButton.outlined(
+                  onPressed: _connected ? _openWorkspaceFilePicker : null,
+                  tooltip: 'Pin Workspace Context Files',
+                  icon: const Icon(Icons.attach_file),
+                ),
+                const SizedBox(width: 6),
                 Expanded(
                   child: TextField(
                     controller: _promptController,

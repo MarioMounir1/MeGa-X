@@ -37,6 +37,12 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/merge` | `POST` | Merges a verified `megax/<task-id>` branch into `main` and deletes the temporary branch |
 | `/api/diff` | `GET` | Live working-tree status lines and unified Git diff (`git diff HEAD`) |
 | `/api/branches` | `GET` | Active branch and all `megax/*` task branches |
+| `/api/commits` | `GET` | Recent Git commit history (`hash`, `subject`, `author`, `date`) |
+| `/api/checkout` | `POST` | Switch the working tree to a specific branch |
+| `/api/files` | `GET` | Workspace source file index (`?query=` substring search) |
+| `/api/file` | `GET` | Safe workspace file inspector (`?path=`) with path-traversal & secret-file guards |
+| `/api/verify` | `POST` | Trigger an on-demand compile + test verification run from mobile |
+| `/api/diagnostics` | `GET` | Redacted environment & AI provider key diagnostics |
 | `/api/logs` | `GET` | Bounded terminal scrollback ring buffer |
 | `/api/queue` | `GET` | Snapshot of FIFO task queue (`QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`) |
 | `/api/history` | `GET` | Persistent task execution audit log (`.megax/audit-history.json`) |
@@ -50,7 +56,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 18 automated test suites
+npm test          # Runs all 31 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 ```

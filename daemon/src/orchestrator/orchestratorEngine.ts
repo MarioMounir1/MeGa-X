@@ -94,6 +94,10 @@ export class OrchestratorEngine {
     return this.workspaceScanner;
   }
 
+  public getFilePatcher(): FilePatcher {
+    return this.filePatcher;
+  }
+
   public getGitManager(): GitManager {
     return this.gitManager;
   }

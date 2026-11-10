@@ -30,6 +30,13 @@ export interface ScannerOptions {
   maxFileSizeBytes?: number;
 }
 
+export interface WorkspaceFileEntry {
+  path: string;
+  sizeBytes: number;
+  extension: string;
+  modifiedAt: string;
+}
+
 /**
  * Automatically discovers and ranks relevant source files in the workspace
  * for a high-level mobile prompt so developers don't have to type file paths on mobile.
@@ -46,10 +53,12 @@ export class WorkspaceScanner {
   }
 
   /**
-   * Recursively lists relative paths of candidate source files in the workspace.
+   * Recursively lists metadata for candidate source files in the workspace,
+   * optionally filtered by a case-insensitive substring query.
    */
-  public listCandidateFiles(): string[] {
-    const results: string[] = [];
+  public listWorkspaceFileEntries(query?: string): WorkspaceFileEntry[] {
+    const entriesList: WorkspaceFileEntry[] = [];
+    const normalizedQuery = query?.trim().toLowerCase();
 
     const walk = (currentDir: string): void => {
       let entries: fs.Dirent[];
@@ -77,7 +86,17 @@ export class WorkspaceScanner {
               const rel = path
                 .relative(this.workspaceRoot, fullPath)
                 .replace(/\\/g, '/');
-              results.push(rel);
+              if (
+                !normalizedQuery ||
+                rel.toLowerCase().includes(normalizedQuery)
+              ) {
+                entriesList.push({
+                  path: rel,
+                  sizeBytes: stat.size,
+                  extension: ext,
+                  modifiedAt: stat.mtime.toISOString(),
+                });
+              }
             }
           } catch {
             // Ignore unreadable files
@@ -87,7 +106,15 @@ export class WorkspaceScanner {
     };
 
     walk(this.workspaceRoot);
-    return results;
+    entriesList.sort((a, b) => a.path.localeCompare(b.path));
+    return entriesList;
+  }
+
+  /**
+   * Recursively lists relative paths of candidate source files in the workspace.
+   */
+  public listCandidateFiles(): string[] {
+    return this.listWorkspaceFileEntries().map((entry) => entry.path);
   }
 
   /**
