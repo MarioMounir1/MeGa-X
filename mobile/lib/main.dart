@@ -52,6 +52,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
   String _currentTaskState = 'IDLE';
   String _engineMode = 'SINGLE_AGENT';
   bool _connected = false;
+  bool _stderrOnlyFilter = false;
 
   @override
   void initState() {
@@ -306,32 +307,89 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                               border:
                                   Border.all(color: const Color(0xFF30363D)),
                             ),
-                            child: _terminalLogs.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                      'Waiting for live Daemon terminal output...',
-                                      style: TextStyle(color: Colors.grey),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    FilterChip(
+                                      label: const Text('stderr only'),
+                                      selected: _stderrOnlyFilter,
+                                      onSelected: (val) => setState(
+                                          () => _stderrOnlyFilter = val),
                                     ),
-                                  )
-                                : ListView.builder(
-                                    itemCount: _terminalLogs.length,
-                                    itemBuilder: (context, index) {
-                                      final item = _terminalLogs[index];
-                                      final color = item.stream == 'stderr'
-                                          ? const Color(0xFFFF7B72)
-                                          : item.stream == 'system'
-                                              ? const Color(0xFF58A6FF)
-                                              : const Color(0xFFC9D1D9);
-                                      return Text(
-                                        item.data,
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 12,
-                                          color: color,
+                                    Row(
+                                      children: [
+                                        TextButton.icon(
+                                          onPressed: _connected
+                                              ? () => _relay
+                                                  .runManualVerification()
+                                              : null,
+                                          icon: const Icon(
+                                              Icons.play_circle_outline,
+                                              size: 16),
+                                          label: const Text('Verify'),
                                         ),
+                                        TextButton.icon(
+                                          onPressed: () async {
+                                            setState(
+                                                () => _terminalLogs.clear());
+                                            if (_connected) {
+                                              await _relay.clearRemoteLogs();
+                                            }
+                                          },
+                                          icon: const Icon(Icons.clear_all,
+                                              size: 16),
+                                          label: const Text('Clear'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 12),
+                                Expanded(
+                                  child: Builder(
+                                    builder: (context) {
+                                      final visibleLogs = _stderrOnlyFilter
+                                          ? _terminalLogs
+                                              .where(
+                                                  (e) => e.stream == 'stderr')
+                                              .toList()
+                                          : _terminalLogs;
+                                      if (visibleLogs.isEmpty) {
+                                        return const Center(
+                                          child: Text(
+                                            'Waiting for live Daemon terminal output...',
+                                            style:
+                                                TextStyle(color: Colors.grey),
+                                          ),
+                                        );
+                                      }
+                                      return ListView.builder(
+                                        itemCount: visibleLogs.length,
+                                        itemBuilder: (context, index) {
+                                          final item = visibleLogs[index];
+                                          final color = item.stream == 'stderr'
+                                              ? const Color(0xFFFF7B72)
+                                              : item.stream == 'system'
+                                                  ? const Color(0xFF58A6FF)
+                                                  : const Color(0xFFC9D1D9);
+                                          return Text(
+                                            item.data,
+                                            style: TextStyle(
+                                              fontFamily: 'monospace',
+                                              fontSize: 12,
+                                              color: color,
+                                            ),
+                                          );
+                                        },
                                       );
                                     },
                                   ),
+                                ),
+                              ],
+                            ),
                           ),
 
                           // Tab 2: Git Diff & Task Branches

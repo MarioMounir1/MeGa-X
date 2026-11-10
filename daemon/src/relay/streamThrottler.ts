@@ -118,8 +118,40 @@ export class TerminalStreamThrottler {
     return [...this.ringBuffer];
   }
 
-  public clearBuffer(): void {
+  /**
+   * Queries the scrollback ring buffer with optional filtering by stream, taskId, and limit.
+   */
+  public queryLogs(options?: {
+    stream?: TerminalStreamEvent['stream'];
+    taskId?: string;
+    limit?: number;
+  }): TerminalStreamEvent[] {
+    let items = [...this.ringBuffer];
+
+    if (options?.stream) {
+      items = items.filter((e) => e.stream === options.stream);
+    }
+
+    if (options?.taskId) {
+      const targetId = options.taskId.trim();
+      items = items.filter((e) => e.taskId === targetId);
+    }
+
+    if (
+      typeof options?.limit === 'number' &&
+      !Number.isNaN(options.limit) &&
+      options.limit > 0
+    ) {
+      items = items.slice(-options.limit);
+    }
+
+    return items;
+  }
+
+  public clearBuffer(): number {
+    const count = this.ringBuffer.length;
     this.ringBuffer.length = 0;
+    return count;
   }
 }
 

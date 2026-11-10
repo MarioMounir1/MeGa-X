@@ -45,7 +45,8 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/file` | `GET` | Safe workspace file inspector (`?path=`) with path-traversal & secret-file guards |
 | `/api/verify` | `POST` | Trigger an on-demand compile + test verification run from mobile |
 | `/api/diagnostics` | `GET` | Redacted environment & AI provider key diagnostics |
-| `/api/logs` | `GET` | Bounded terminal scrollback ring buffer |
+| `/api/logs` | `GET` | Bounded terminal scrollback ring buffer (`?stream=stdout\|stderr\|system&taskId=&limit=`) |
+| `/api/logs/clear` | `POST` | Clear the bounded terminal scrollback ring buffer |
 | `/api/queue` | `GET` | Snapshot of FIFO task queue (`QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`) |
 | `/api/queue/cancel` | `POST` | Cancel a waiting `QUEUED` task before it starts execution |
 | `/api/queue/clear` | `POST` | Prune finished (`COMPLETED`, `FAILED`, `CANCELLED`) tasks from the queue |
@@ -61,7 +62,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 34 automated test suites
+npm test          # Runs all 35 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 ```

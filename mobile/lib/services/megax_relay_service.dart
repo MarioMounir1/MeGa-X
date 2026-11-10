@@ -353,6 +353,54 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<TerminalStreamEvent>> fetchLogs({
+    String? stream,
+    String? taskId,
+    int? limit,
+  }) async {
+    final client = HttpClient();
+    try {
+      final queryParams = <String, String>{};
+      if (stream != null && stream.isNotEmpty) {
+        queryParams['stream'] = stream;
+      }
+      if (taskId != null && taskId.isNotEmpty) {
+        queryParams['taskId'] = taskId;
+      }
+      if (limit != null && limit > 0) {
+        queryParams['limit'] = limit.toString();
+      }
+      final uri = Uri.parse('$_httpBaseUrl/api/logs').replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['logs'] as List<dynamic>?)
+              ?.map((e) =>
+                  TerminalStreamEvent.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<int> clearRemoteLogs() async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.postUrl(Uri.parse('$_httpBaseUrl/api/logs/clear'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body) as Map<String, dynamic>;
+      return (decoded['clearedCount'] as num?)?.toInt() ?? 0;
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

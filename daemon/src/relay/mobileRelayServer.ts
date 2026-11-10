@@ -345,10 +345,40 @@ export class MobileRelayServer {
     }
 
     if (req.method === 'GET' && cleanPath === '/api/logs') {
+      const parsedUrl = new URL(req.url ?? '/api/logs', 'http://localhost');
+      const rawStream = parsedUrl.searchParams.get('stream')?.toLowerCase();
+      const stream =
+        rawStream === 'stdout' ||
+        rawStream === 'stderr' ||
+        rawStream === 'system'
+          ? rawStream
+          : undefined;
+      const taskId = parsedUrl.searchParams.get('taskId') ?? undefined;
+      const rawLimit = parsedUrl.searchParams.get('limit');
+      const limit = rawLimit ? Number.parseInt(rawLimit, 10) : undefined;
+
+      const logs = this.streamThrottler.queryLogs({
+        stream,
+        taskId,
+        limit,
+      });
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({
-          logs: this.streamThrottler.getRecentLogs(),
+          logs,
+          totalCount: logs.length,
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/logs/clear') {
+      const clearedCount = this.streamThrottler.clearBuffer();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          clearedCount,
         })
       );
       return;
