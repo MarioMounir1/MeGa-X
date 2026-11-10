@@ -12,5 +12,6 @@ daemon/dist/
 Thumbs.db
 .env
 .env.*
+!.env.example
 .megax/
 

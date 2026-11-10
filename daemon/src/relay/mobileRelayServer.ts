@@ -1,6 +1,7 @@
 import * as crypto from 'crypto';
 import * as http from 'http';
 import { Duplex } from 'stream';
+import { getEnvDiagnostics } from '../config/envConfig';
 import {
   OrchestrationRunResult,
   OrchestratorEngine,
@@ -273,6 +274,12 @@ export class MobileRelayServer {
           pendingApprovals: Array.from(this.pendingApprovals.keys()),
         })
       );
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/diagnostics') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(getEnvDiagnostics()));
       return;
     }
 

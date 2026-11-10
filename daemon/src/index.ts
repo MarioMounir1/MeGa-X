@@ -12,6 +12,7 @@ import { AgentRegistry } from './agents/agentRegistry';
 
 export * from './types/contracts';
 export * from './config/configLoader';
+export * from './config/envConfig';
 export * from './patcher/filePatcher';
 export * from './patcher/workspaceScanner';
 export * from './security/securityGate';
