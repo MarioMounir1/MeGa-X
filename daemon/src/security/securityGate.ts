@@ -29,13 +29,20 @@ const DB_MIGRATION_CONTENT_PATTERNS = [
 export class SecurityGate {
   private readonly requiredTriggers: Set<ApprovalTrigger>;
   private approvalHandler?: ApprovalHandler;
+  private approvalTimeoutMs?: number;
 
   constructor(
     securityConfig: SecurityConfig,
-    approvalHandler?: ApprovalHandler
+    approvalHandler?: ApprovalHandler,
+    approvalTimeoutMs?: number
   ) {
     this.requiredTriggers = new Set(securityConfig.requireApprovalOn);
     this.approvalHandler = approvalHandler;
+    this.approvalTimeoutMs = approvalTimeoutMs;
+  }
+
+  public setApprovalTimeoutMs(timeoutMs?: number): void {
+    this.approvalTimeoutMs = timeoutMs;
   }
 
   public setApprovalHandler(handler: ApprovalHandler): void {
@@ -131,7 +138,45 @@ export class SecurityGate {
       };
     }
 
-    return this.approvalHandler(request);
+    if (!this.approvalTimeoutMs || this.approvalTimeoutMs <= 0) {
+      return this.approvalHandler(request);
+    }
+
+    const timeoutMs = this.approvalTimeoutMs;
+    return new Promise<ApprovalDecisionPayload>((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        resolve({
+          approvalId: request.approvalId,
+          taskId,
+          approved: false,
+          userNote: `Denied automatically: Approval timed out after ${timeoutMs}ms.`,
+        });
+      }, timeoutMs);
+
+      this.approvalHandler!(request)
+        .then((decision) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(decision);
+        })
+        .catch((err: unknown) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve({
+            approvalId: request.approvalId,
+            taskId,
+            approved: false,
+            userNote: `Approval handler error: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          });
+        });
+    });
   }
 
   /**

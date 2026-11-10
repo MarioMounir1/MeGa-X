@@ -21,8 +21,10 @@ export * from './verifier/verificationRunner';
 export * from './agents/agentRegistry';
 export * from './agents/liveProviders';
 export * from './orchestrator/orchestratorEngine';
+export * from './orchestrator/taskQueue';
 export * from './relay/mobileRelayServer';
 export * from './relay/fcmDispatcher';
+export * from './relay/streamThrottler';
 export * from './relay/tunnelInspector';
 export * from './cli';
 

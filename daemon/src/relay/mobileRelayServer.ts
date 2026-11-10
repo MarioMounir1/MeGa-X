@@ -6,6 +6,7 @@ import {
   OrchestratorEngine,
   TaskStateChangeEvent,
 } from '../orchestrator/orchestratorEngine';
+import { TaskQueueManager } from '../orchestrator/taskQueue';
 import {
   ApprovalDecisionPayload,
   ApprovalRequestPayload,
@@ -13,6 +14,7 @@ import {
   MegaXConfig,
   TerminalStreamEvent,
 } from '../types/contracts';
+import { TerminalStreamThrottler } from './streamThrottler';
 import { TunnelInspector } from './tunnelInspector';
 
 export interface FcmNotificationPayload {
@@ -73,6 +75,8 @@ export class MobileRelayServer {
     string,
     (decision: ApprovalDecisionPayload) => void
   >();
+  private readonly streamThrottler: TerminalStreamThrottler;
+  private readonly taskQueue: TaskQueueManager;
 
   constructor(
     engine: OrchestratorEngine,
@@ -82,10 +86,16 @@ export class MobileRelayServer {
     this.engine = engine;
     this.fcmSender = fcmSender;
     this.relaySecretToken = relaySecretToken;
+    this.streamThrottler = new TerminalStreamThrottler((evt) => {
+      this.broadcast({ type: 'TERMINAL_STREAM', payload: evt });
+    });
+    this.taskQueue = new TaskQueueManager(this.engine, (result) => {
+      this.broadcast({ type: 'ORCHESTRATION_RESULT', payload: result });
+    });
 
     // Wire engine telemetry and security gate into the relay
     this.engine.getVerificationRunner().setStreamListener((evt) => {
-      this.broadcast({ type: 'TERMINAL_STREAM', payload: evt });
+      this.streamThrottler.push(evt);
     });
 
     this.engine.setStateChangeListener((evt) => {
@@ -287,6 +297,26 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/logs') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          logs: this.streamThrottler.getRecentLogs(),
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/queue') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          queue: this.taskQueue.getQueueSnapshot(),
+        })
+      );
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/diff') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
@@ -405,18 +435,11 @@ export class MobileRelayServer {
           res.writeHead(202, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ accepted: true, taskId: parsed.taskId }));
 
-          void this.engine
-            .runFeaturePrompt(
-              parsed.taskId,
-              parsed.prompt,
-              parsed.contextFiles ?? []
-            )
-            .then((result) => {
-              this.broadcast({
-                type: 'ORCHESTRATION_RESULT',
-                payload: result,
-              });
-            });
+          void this.taskQueue.enqueue(
+            parsed.taskId,
+            parsed.prompt,
+            parsed.contextFiles ?? []
+          );
         } catch (err) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(
@@ -504,11 +527,11 @@ export class MobileRelayServer {
     }
 
     if (msg.type === 'PROMPT_SUBMIT') {
-      void this.engine
-        .runFeaturePrompt(msg.taskId, msg.prompt, msg.contextFiles ?? [])
-        .then((result) => {
-          this.broadcast({ type: 'ORCHESTRATION_RESULT', payload: result });
-        });
+      void this.taskQueue.enqueue(
+        msg.taskId,
+        msg.prompt,
+        msg.contextFiles ?? []
+      );
     }
   }
 
