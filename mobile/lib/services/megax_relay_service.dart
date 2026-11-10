@@ -112,6 +112,19 @@ class MegaXRelayService {
     socket.add(jsonEncode({'type': 'ABORT_TASK'}));
   }
 
+  Future<DaemonStatusSnapshot> fetchDaemonStatus() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/status'));
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      return DaemonStatusSnapshot.fromJson(
+          jsonDecode(body) as Map<String, dynamic>);
+    } finally {
+      client.close();
+    }
+  }
+
   Future<DaemonMetricsSummary> fetchMetrics() async {
     final client = HttpClient();
     try {

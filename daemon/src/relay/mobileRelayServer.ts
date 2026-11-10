@@ -285,12 +285,17 @@ export class MobileRelayServer {
     }
 
     if (req.method === 'GET' && cleanPath === '/api/status') {
+      const cfg = this.engine.getConfig();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({
           status: 'ONLINE',
+          projectName: cfg.projectName,
+          engineMode: cfg.engineMode,
           connectedClients: this.clients.size,
           pendingApprovals: Array.from(this.pendingApprovals.keys()),
+          lastStateEvent: this.engine.getLastStateEvent(),
+          uptimeSeconds: Math.floor(process.uptime()),
         })
       );
       return;
@@ -894,6 +899,18 @@ export class MobileRelayServer {
       if (!socket.destroyed) {
         socket.write(replayFrame);
       }
+    }
+
+    // Replay the latest orchestrator state event upon mobile reconnect
+    const latestState = this.engine.getLastStateEvent();
+    if (latestState && !socket.destroyed) {
+      const stateFrame = MobileRelayServer.encodeWsTextFrame(
+        JSON.stringify({
+          type: 'STATE_CHANGE',
+          payload: latestState,
+        } satisfies RelayOutboundMessage)
+      );
+      socket.write(stateFrame);
     }
 
     socket.on('data', (buffer: Buffer) => {

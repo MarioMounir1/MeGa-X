@@ -278,3 +278,35 @@ class AuditHistoryEntry {
   }
 }
 
+class DaemonStatusSnapshot {
+  final String status;
+  final String projectName;
+  final String engineMode;
+  final int connectedClients;
+  final int uptimeSeconds;
+  final TaskStateChangeEvent? lastStateEvent;
+
+  const DaemonStatusSnapshot({
+    required this.status,
+    required this.projectName,
+    required this.engineMode,
+    required this.connectedClients,
+    required this.uptimeSeconds,
+    this.lastStateEvent,
+  });
+
+  factory DaemonStatusSnapshot.fromJson(Map<String, dynamic> json) {
+    final rawLast = json['lastStateEvent'];
+    return DaemonStatusSnapshot(
+      status: json['status'] as String? ?? 'ONLINE',
+      projectName: json['projectName'] as String? ?? '',
+      engineMode: json['engineMode'] as String? ?? 'SINGLE_AGENT',
+      connectedClients: (json['connectedClients'] as num?)?.toInt() ?? 0,
+      uptimeSeconds: (json['uptimeSeconds'] as num?)?.toInt() ?? 0,
+      lastStateEvent: rawLast is Map<String, dynamic>
+          ? TaskStateChangeEvent.fromJson(rawLast)
+          : null,
+    );
+  }
+}
+

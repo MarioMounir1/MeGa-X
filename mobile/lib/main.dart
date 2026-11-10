@@ -98,6 +98,7 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
   Future<void> _refreshTelemetry() async {
     if (!_connected) return;
     try {
+      final status = await _relay.fetchDaemonStatus();
       final metrics = await _relay.fetchMetrics();
       final diff = await _relay.fetchDiff();
       final branches = await _relay.fetchTaskBranches();
@@ -106,6 +107,10 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
       final approvals = await _relay.fetchPendingApprovals();
       if (!mounted) return;
       setState(() {
+        _engineMode = status.engineMode;
+        if (status.lastStateEvent != null) {
+          _currentTaskState = status.lastStateEvent!.state;
+        }
         _metrics = metrics;
         _diffSnapshot = diff;
         _taskBranches = branches;

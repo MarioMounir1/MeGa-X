@@ -64,6 +64,7 @@ export class OrchestratorEngine {
   private readonly securityGate: SecurityGate;
   private readonly verificationRunner: VerificationRunner;
   private stateListener?: StateChangeListener;
+  private lastStateEvent: TaskStateChangeEvent | null = null;
   private abortRequested = false;
 
   constructor(options: OrchestratorOptions) {
@@ -156,22 +157,28 @@ export class OrchestratorEngine {
     this.stateListener = listener;
   }
 
+  public getLastStateEvent(): TaskStateChangeEvent | null {
+    return this.lastStateEvent ? { ...this.lastStateEvent } : null;
+  }
+
   private emitState(
     taskId: string,
     state: TaskState,
     attempt: number,
     message: string
   ): void {
-    if (!this.stateListener) {
-      return;
-    }
-    this.stateListener({
+    const evt: TaskStateChangeEvent = {
       taskId,
       state,
       attempt,
       message,
       timestamp: new Date().toISOString(),
-    });
+    };
+    this.lastStateEvent = evt;
+    if (!this.stateListener) {
+      return;
+    }
+    this.stateListener(evt);
   }
 
   /**
