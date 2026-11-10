@@ -104,3 +104,4 @@ describe('Phase 17: Pre-Flight Auto-Stash Protection & Task Branch Registry API'
     }
   });
 });
+
