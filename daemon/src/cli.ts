@@ -1,8 +1,11 @@
 #!/usr/bin/env node
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadMegaXConfig } from './config/configLoader';
+import { getEnvDiagnostics } from './config/envConfig';
 import { bootstrapDaemon, startDaemonRelayServer } from './index';
+import { TunnelInspector } from './relay/tunnelInspector';
 import { EngineMode, MegaXConfig } from './types/contracts';
 
 export const DEFAULT_MEGAX_CONFIG: MegaXConfig = {
@@ -62,10 +65,46 @@ export async function runMegaXCli(args: string[]): Promise<{
       'Usage:',
       '  megax init [dir]                  Create a megax.config.json in [dir]',
       '  megax status [--config <path>]    Display project config and audit history',
+      '  megax doctor [--config <path>]    Run system readiness & environment check',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
       '  megax serve [--port <number>]     Start Mobile Relay Server & Web UI',
     ].join('\n');
     return { exitCode: 0, output: helpText };
+  }
+
+  if (command === 'doctor') {
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    let gitVersion = 'NOT_FOUND';
+    try {
+      gitVersion = execFileSync('git', ['--version'], {
+        encoding: 'utf-8',
+      }).trim();
+    } catch {
+      // Git missing
+    }
+
+    const config = loadMegaXConfig(cfgPath);
+    const diag = getEnvDiagnostics();
+    const pairing = TunnelInspector.getPairingInfo(diag.port);
+
+    const report = [
+      '=== MeGa X System Readiness Doctor ===',
+      `Node Runtime   : ${process.version}`,
+      `Git Binary     : ${gitVersion}`,
+      `Config Valid   : YES (${config.projectName} | ${config.engineMode})`,
+      `Recommended WS : ${pairing.recommendedWsUrl}`,
+      `Providers Ready: Claude=${diag.providersConfigured.anthropicClaude} | Codex=${diag.providersConfigured.openaiCodex} | AntiGravity=${diag.providersConfigured.geminiAntiGravity}`,
+    ].join('\n');
+
+    return {
+      exitCode: gitVersion === 'NOT_FOUND' ? 1 : 0,
+      output: report,
+    };
   }
 
   if (command === 'init') {

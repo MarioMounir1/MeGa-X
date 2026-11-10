@@ -682,7 +682,10 @@ export class MobileRelayServer {
 <body>
   <header>
     <strong>🚀 MeGa X • Mobile Steering Wheel</strong>
-    <span class="badge" id="state-badge">CONNECTING...</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="mode-btn" onclick="toggleMode()" style="padding:4px 10px;font-size:12px;">SINGLE_AGENT</button>
+      <span class="badge" id="state-badge">CONNECTING...</span>
+    </div>
   </header>
   <div id="approval-card">
     <div id="approval-text" style="margin-bottom:8px;font-weight:600;"></div>
@@ -693,11 +696,13 @@ export class MobileRelayServer {
   <div class="prompt-bar">
     <input id="prompt-input" placeholder="Enter high-level feature prompt for MeGa X..." />
     <button onclick="submitPrompt()">Dispatch</button>
+    <button class="danger" onclick="abortTask()">Abort & Rollback</button>
   </div>
   <script>
     const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
     const term = document.getElementById('terminal');
     const badge = document.getElementById('state-badge');
+    const modeBtn = document.getElementById('mode-btn');
     let pendingApproval = null;
     ws.onopen = () => { badge.textContent = 'IDLE (CONNECTED)'; };
     ws.onclose = () => { badge.textContent = 'DISCONNECTED'; };
@@ -713,8 +718,17 @@ export class MobileRelayServer {
         pendingApproval = msg.payload;
         document.getElementById('approval-text').textContent = '⚠️ ' + msg.payload.trigger + ': ' + msg.payload.summary;
         document.getElementById('approval-card').style.display = 'block';
+      } else if (msg.type === 'CONFIG_UPDATED') {
+        modeBtn.textContent = msg.payload.engineMode;
       }
     };
+    function toggleMode() {
+      const next = modeBtn.textContent === 'SINGLE_AGENT' ? 'MULTI_AGENT' : 'SINGLE_AGENT';
+      ws.send(JSON.stringify({ type: 'SET_ENGINE_MODE', engineMode: next }));
+    }
+    function abortTask() {
+      ws.send(JSON.stringify({ type: 'ABORT_TASK' }));
+    }
     function submitPrompt() {
       const input = document.getElementById('prompt-input');
       if (!input.value.trim()) return;
