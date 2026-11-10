@@ -154,3 +154,39 @@ export function loadMegaXConfig(configPath?: string): MegaXConfig {
   return validateMegaXConfig(parsed);
 }
 
+/**
+ * Watches a `megax.config.json` file on disk and invokes `onReload` with the validated config
+ * whenever changes are saved. Returns an unwatch cleanup function.
+ */
+export function watchMegaXConfig(
+  configPath: string,
+  onReload: (config: MegaXConfig) => void,
+  onError?: (err: Error) => void
+): () => void {
+  const resolvedPath = path.resolve(configPath);
+  let debounceTimer: NodeJS.Timeout | null = null;
+
+  const watcher = fs.watch(resolvedPath, () => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      try {
+        const updated = loadMegaXConfig(resolvedPath);
+        onReload(updated);
+      } catch (err) {
+        if (onError) {
+          onError(err instanceof Error ? err : new Error(String(err)));
+        }
+      }
+    }, 50);
+  });
+
+  return () => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    watcher.close();
+  };
+}
+

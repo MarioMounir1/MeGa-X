@@ -1,6 +1,7 @@
 import * as crypto from 'crypto';
 import * as http from 'http';
 import { Duplex } from 'stream';
+import { validateMegaXConfig } from '../config/configLoader';
 import { getEnvDiagnostics } from '../config/envConfig';
 import {
   OrchestrationRunResult,
@@ -369,8 +370,26 @@ export class MobileRelayServer {
       });
       req.on('end', () => {
         try {
-          const parsed = JSON.parse(body) as { engineMode: EngineMode };
-          const updated = this.engine.setEngineMode(parsed.engineMode);
+          const parsed = JSON.parse(body) as Partial<MegaXConfig>;
+          const current = this.engine.getConfig();
+          const mergedCandidate = {
+            ...current,
+            ...parsed,
+            multiAgentConfig: {
+              ...current.multiAgentConfig,
+              ...(parsed.multiAgentConfig ?? {}),
+            },
+            verification: {
+              ...current.verification,
+              ...(parsed.verification ?? {}),
+            },
+            security: {
+              ...current.security,
+              ...(parsed.security ?? {}),
+            },
+          };
+          const validated = validateMegaXConfig(mergedCandidate);
+          const updated = this.engine.updateConfig(validated);
           this.broadcast({ type: 'CONFIG_UPDATED', payload: updated });
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(updated));
