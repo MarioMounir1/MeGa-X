@@ -357,6 +357,17 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/commits') {
+      const git = this.engine.getGitManager();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          commits: git.getRecentCommits(10),
+        })
+      );
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/config') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(this.engine.getConfig()));

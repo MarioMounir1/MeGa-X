@@ -265,5 +265,37 @@ export class GitManager {
   public popLastStash(): void {
     this.runGit(['stash', 'pop']);
   }
+
+  /**
+   * Returns the most recent commits on the current branch.
+   */
+  public getRecentCommits(limit = 10): {
+    hash: string;
+    subject: string;
+    author: string;
+    date: string;
+  }[] {
+    if (!this.isGitRepository()) {
+      return [];
+    }
+    const raw = this.runGit([
+      'log',
+      `-n`,
+      String(limit),
+      '--pretty=format:%h|%s|%an|%cI',
+    ]);
+    if (!raw) {
+      return [];
+    }
+    return raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [hash = '', subject = '', author = '', date = ''] =
+          line.split('|');
+        return { hash, subject, author, date };
+      });
+  }
 }
 
