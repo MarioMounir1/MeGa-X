@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  megax-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: megax-daemon
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4040}:4040"
+    environment:
+      - PORT=4040
+      - RELAY_SECRET_TOKEN=${RELAY_SECRET_TOKEN:-}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - ./workspace:/workspace
+      - ./megax.config.json:/workspace/megax.config.json
+      - ./.megax:/workspace/.megax
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040/api/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

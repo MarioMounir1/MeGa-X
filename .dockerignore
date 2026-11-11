@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.github
+.megax
+coverage
+mobile
+*.log
+tmp
+.env

@@ -74,7 +74,23 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 50 automated test suites (Milestone)
+npm test          # Runs all 51 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
+```
+
+### 🐳 Docker & Docker Compose Deployment
+
+MeGa X includes a production-grade multi-stage `Dockerfile` and `docker-compose.yml` with healthchecks:
+
+```powershell
+# Validate Docker configuration readiness via CLI
+npx megax docker
+
+# Launch background containerized daemon with volume-mounted workspace
+docker compose up -d
+
+# Check real-time container health
+docker compose ps
+curl http://localhost:4040/api/status
 ```

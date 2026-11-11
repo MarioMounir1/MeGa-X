@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { loadMegaXConfig } from './config/configLoader';
 import { getEnvDiagnostics } from './config/envConfig';
+import { validateDockerEnvironment } from './container/dockerConfigValidator';
 import { bootstrapDaemon, startDaemonRelayServer } from './index';
 import { TunnelInspector } from './relay/tunnelInspector';
 import { EngineMode, MegaXConfig } from './types/contracts';
@@ -66,6 +67,7 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax init [dir]                  Create a megax.config.json in [dir]',
       '  megax status [--config <path>]    Display project config and audit history',
       '  megax doctor [--config <path>]    Run system readiness & environment check',
+      '  megax docker [--root <path>]      Validate Docker container readiness',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -115,6 +117,30 @@ export async function runMegaXCli(args: string[]): Promise<{
     return {
       exitCode: 0,
       output: `Initialized MeGa X configuration at: ${createdPath}`,
+    };
+  }
+
+  if (command === 'docker') {
+    const rootIdx = rest.indexOf('--root');
+    const rootDir =
+      rootIdx !== -1 && rest[rootIdx + 1]
+        ? path.resolve(rest[rootIdx + 1])
+        : path.resolve(__dirname, '..', '..');
+
+    const report = validateDockerEnvironment(rootDir);
+    const output = [
+      '=== MeGa X Docker Readiness Check ===',
+      `Valid         : ${report.valid ? 'YES' : 'NO'}`,
+      `Dockerfile    : ${report.dockerfile.exists ? 'FOUND' : 'MISSING'} (MultiStage=${report.dockerfile.isMultiStage}, Git=${report.dockerfile.hasGitInstalled}, Healthcheck=${report.dockerfile.hasCurlHealthcheck}, Port=${report.dockerfile.exposedPort})`,
+      `Docker Compose: ${report.compose.exists ? 'FOUND' : 'MISSING'} (DaemonService=${report.compose.hasDaemonService}, PortMapping=${report.compose.hasPortMapping}, WorkspaceVolume=${report.compose.hasWorkspaceVolume}, Healthcheck=${report.compose.hasHealthcheck})`,
+      report.errors.length > 0 ? `\nErrors:\n${report.errors.map(e => `  - ${e}`).join('\n')}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    return {
+      exitCode: report.valid ? 0 : 1,
+      output,
     };
   }
 
