@@ -417,6 +417,27 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                                   'Active Branch: ${_diffSnapshot?.currentBranch ?? "unknown"}',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Active Branch: ${_diffSnapshot?.currentBranch ?? "unknown"}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    OutlinedButton.icon(
+                                      onPressed: _connected
+                                          ? () async {
+                                              await _relay.triggerHardRollback(
+                                                  returnBranch: 'main');
+                                              await _refreshTelemetry();
+                                            }
+                                          : null,
+                                      icon: const Icon(Icons.restore, size: 16),
+                                      label: const Text('Hard Rollback'),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 8),
                                 for (final b in _taskBranches)

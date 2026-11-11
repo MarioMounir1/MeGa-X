@@ -505,6 +505,29 @@ class MegaXRelayService {
     }
   }
 
+  Future<bool> triggerHardRollback({
+    String? returnBranch,
+    String? deleteTaskBranch,
+  }) async {
+    final client = HttpClient();
+    try {
+      final req = await client.postUrl(Uri.parse('$_httpBaseUrl/api/rollback'));
+      req.headers.contentType = ContentType.json;
+      req.write(
+        jsonEncode({
+          if (returnBranch != null) 'returnBranch': returnBranch,
+          if (deleteTaskBranch != null) 'deleteTaskBranch': deleteTaskBranch,
+        }),
+      );
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded['rolledBack'] as bool? ?? false;
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

@@ -792,6 +792,58 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'POST' && cleanPath === '/api/rollback') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed =
+            body.trim().length > 0
+              ? (JSON.parse(body) as {
+                  returnBranch?: string;
+                  deleteTaskBranch?: string;
+                })
+              : {};
+          this.engine.abortActiveTask();
+          const git = this.engine.getGitManager();
+          git.hardRollback({
+            returnBranch: parsed.returnBranch,
+            deleteTaskBranch: parsed.deleteTaskBranch,
+          });
+          const diff = git.getWorkingTreeDiff();
+          this.broadcast({
+            type: 'STATE_CHANGE',
+            payload: {
+              taskId: 'manual_rollback',
+              state: 'ROLLING_BACK',
+              attempt: 0,
+              message: `Working tree hard-rolled back to HEAD on branch "${diff.currentBranch}".`,
+              timestamp: new Date().toISOString(),
+            },
+          });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              rolledBack: true,
+              currentBranch: diff.currentBranch,
+              statusLines: diff.statusLines,
+            })
+          );
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error:
+                err instanceof Error ? err.message : 'Hard rollback failed',
+            })
+          );
+        }
+      });
+      return;
+    }
+
     if (req.method === 'POST' && cleanPath === '/api/verify') {
       void this.engine
         .getVerificationRunner()
