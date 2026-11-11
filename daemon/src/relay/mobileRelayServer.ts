@@ -594,6 +594,77 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/stash') {
+      const git = this.engine.getGitManager();
+      const stashes = git.listStashes();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          stashes,
+          totalCount: stashes.length,
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/stash/push') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed =
+            body.trim().length > 0
+              ? (JSON.parse(body) as { label?: string })
+              : {};
+          const git = this.engine.getGitManager();
+          const stashed = git.stashUncommittedChanges(
+            parsed.label ?? 'megax-mobile-stash'
+          );
+          const stashes = git.listStashes();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              stashed,
+              stashes,
+            })
+          );
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: err instanceof Error ? err.message : 'Git stash push failed',
+            })
+          );
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/stash/pop') {
+      try {
+        const git = this.engine.getGitManager();
+        git.popLastStash();
+        const stashes = git.listStashes();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            popped: true,
+            stashes,
+          })
+        );
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error: err instanceof Error ? err.message : 'Git stash pop failed',
+          })
+        );
+      }
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/files') {
       const parsedUrl = new URL(req.url ?? '/api/files', 'http://localhost');
       const query = parsedUrl.searchParams.get('query') ?? undefined;

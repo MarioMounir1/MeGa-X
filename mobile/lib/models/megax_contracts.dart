@@ -344,3 +344,23 @@ class AgentRosterSnapshot {
   }
 }
 
+class GitStashEntry {
+  final String ref;
+  final String message;
+  final String date;
+
+  const GitStashEntry({
+    required this.ref,
+    required this.message,
+    required this.date,
+  });
+
+  factory GitStashEntry.fromJson(Map<String, dynamic> json) {
+    return GitStashEntry(
+      ref: json['ref'] as String? ?? '',
+      message: json['message'] as String? ?? '',
+      date: json['date'] as String? ?? '',
+    );
+  }
+}
+

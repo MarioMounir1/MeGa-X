@@ -528,6 +528,52 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<GitStashEntry>> fetchStashes() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/stash'));
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return (decoded['stashes'] as List<dynamic>?)
+              ?.map((e) => GitStashEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<bool> stashWorkingTree({String? label}) async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.postUrl(Uri.parse('$_httpBaseUrl/api/stash/push'));
+      req.headers.contentType = ContentType.json;
+      req.write(jsonEncode({if (label != null) 'label': label}));
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded['stashed'] as bool? ?? false;
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<bool> popStash() async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.postUrl(Uri.parse('$_httpBaseUrl/api/stash/pop'));
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded['popped'] as bool? ?? false;
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

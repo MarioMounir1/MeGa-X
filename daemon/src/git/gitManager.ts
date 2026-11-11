@@ -303,6 +303,31 @@ export class GitManager {
   }
 
   /**
+   * Lists all saved Git stash entries in the repository.
+   */
+  public listStashes(): {
+    ref: string;
+    message: string;
+    date: string;
+  }[] {
+    if (!this.isGitRepository()) {
+      return [];
+    }
+    const raw = this.runGit(['stash', 'list', '--pretty=format:%gd|%gs|%cI']);
+    if (!raw) {
+      return [];
+    }
+    return raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [ref = '', message = '', date = ''] = line.split('|');
+        return { ref, message, date };
+      });
+  }
+
+  /**
    * Returns the most recent commits on the current branch.
    */
   public getRecentCommits(limit = 10): {

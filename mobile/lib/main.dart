@@ -413,10 +413,6 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                             ),
                             child: ListView(
                               children: [
-                                Text(
-                                  'Active Branch: ${_diffSnapshot?.currentBranch ?? "unknown"}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
@@ -426,16 +422,42 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold),
                                     ),
-                                    OutlinedButton.icon(
-                                      onPressed: _connected
-                                          ? () async {
-                                              await _relay.triggerHardRollback(
-                                                  returnBranch: 'main');
-                                              await _refreshTelemetry();
-                                            }
-                                          : null,
-                                      icon: const Icon(Icons.restore, size: 16),
-                                      label: const Text('Hard Rollback'),
+                                    Wrap(
+                                      spacing: 6,
+                                      children: [
+                                        TextButton(
+                                          onPressed: _connected
+                                              ? () async {
+                                                  await _relay
+                                                      .stashWorkingTree();
+                                                  await _refreshTelemetry();
+                                                }
+                                              : null,
+                                          child: const Text('Stash WIP'),
+                                        ),
+                                        TextButton(
+                                          onPressed: _connected
+                                              ? () async {
+                                                  await _relay.popStash();
+                                                  await _refreshTelemetry();
+                                                }
+                                              : null,
+                                          child: const Text('Pop Stash'),
+                                        ),
+                                        OutlinedButton.icon(
+                                          onPressed: _connected
+                                              ? () async {
+                                                  await _relay
+                                                      .triggerHardRollback(
+                                                          returnBranch: 'main');
+                                                  await _refreshTelemetry();
+                                                }
+                                              : null,
+                                          icon: const Icon(Icons.restore,
+                                              size: 16),
+                                          label: const Text('Hard Rollback'),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
