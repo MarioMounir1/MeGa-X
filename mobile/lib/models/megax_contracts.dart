@@ -395,3 +395,31 @@ class WorkspaceSearchMatch {
   }
 }
 
+class SecurityGateSummary {
+  final List<String> requireApprovalOn;
+  final int? approvalTimeoutMs;
+  final bool hasApprovalHandler;
+  final int protectedFileRuleCount;
+
+  const SecurityGateSummary({
+    required this.requireApprovalOn,
+    this.approvalTimeoutMs,
+    required this.hasApprovalHandler,
+    required this.protectedFileRuleCount,
+  });
+
+  factory SecurityGateSummary.fromJson(Map<String, dynamic> json) {
+    final triggers = (json['requireApprovalOn'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [];
+    return SecurityGateSummary(
+      requireApprovalOn: triggers,
+      approvalTimeoutMs: (json['approvalTimeoutMs'] as num?)?.toInt(),
+      hasApprovalHandler: json['hasApprovalHandler'] as bool? ?? false,
+      protectedFileRuleCount:
+          (json['protectedFileRuleCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+

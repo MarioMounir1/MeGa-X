@@ -49,6 +49,20 @@ export class SecurityGate {
     this.approvalTimeoutMs = approvalTimeoutMs;
   }
 
+  public getSecuritySummary(): {
+    requireApprovalOn: ApprovalTrigger[];
+    approvalTimeoutMs?: number;
+    hasApprovalHandler: boolean;
+    protectedFileRuleCount: number;
+  } {
+    return {
+      requireApprovalOn: Array.from(this.requiredTriggers),
+      approvalTimeoutMs: this.approvalTimeoutMs,
+      hasApprovalHandler: Boolean(this.approvalHandler),
+      protectedFileRuleCount: PROTECTED_FILE_PATTERNS.length,
+    };
+  }
+
   public setRequiredTriggers(triggers: ApprovalTrigger[]): void {
     this.requiredTriggers = new Set(triggers);
   }

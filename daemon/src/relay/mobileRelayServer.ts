@@ -14,6 +14,7 @@ import { TelemetryMetricsCollector } from '../storage/metricsCollector';
 import {
   ApprovalDecisionPayload,
   ApprovalRequestPayload,
+  ApprovalTrigger,
   EngineMode,
   MegaXConfig,
   TerminalStreamEvent,
@@ -804,6 +805,46 @@ export class MobileRelayServer {
         .getRoleAssignmentSummary(this.engine.getConfig());
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(summary));
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/security') {
+      const summary = this.engine.getSecurityGate().getSecuritySummary();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(summary));
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/security') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as {
+            requireApprovalOn?: ApprovalTrigger[];
+            approvalTimeoutMs?: number;
+          };
+          const gate = this.engine.getSecurityGate();
+          if (Array.isArray(parsed.requireApprovalOn)) {
+            gate.setRequiredTriggers(parsed.requireApprovalOn);
+          }
+          if (typeof parsed.approvalTimeoutMs === 'number') {
+            gate.setApprovalTimeoutMs(parsed.approvalTimeoutMs);
+          }
+          const summary = gate.getSecuritySummary();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(summary));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: err instanceof Error ? err.message : 'Invalid JSON',
+            })
+          );
+        }
+      });
       return;
     }
 
