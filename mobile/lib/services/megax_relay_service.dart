@@ -691,6 +691,19 @@ class MegaXRelayService {
     }
   }
 
+  Future<MobilePairingManifest> fetchPairingManifest() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/pairing'));
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return MobilePairingManifest.fromJson(decoded);
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

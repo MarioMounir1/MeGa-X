@@ -89,6 +89,30 @@ export class TunnelInspector {
   }
 
   /**
+   * Generates a URI for QR code scanning on mobile containing connection info and optional token.
+   */
+  public static generatePairingQrPayload(
+    pairingInfo: MobilePairingInfo,
+    token?: string
+  ): {
+    scheme: string;
+    targetUrl: string;
+    tokenRequired: boolean;
+    qrUri: string;
+  } {
+    const wsUrl = pairingInfo.recommendedWsUrl;
+    const tokenPart = token ? `&token=${encodeURIComponent(token)}` : '';
+    const qrUri = `megax://connect?url=${encodeURIComponent(wsUrl)}${tokenPart}`;
+
+    return {
+      scheme: 'megax',
+      targetUrl: wsUrl,
+      tokenRequired: pairingInfo.requiresToken,
+      qrUri,
+    };
+  }
+
+  /**
    * Generates a complete pairing manifest for the Flutter Mobile Companion App.
    */
   public static getPairingInfo(

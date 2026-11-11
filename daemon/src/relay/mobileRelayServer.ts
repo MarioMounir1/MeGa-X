@@ -333,11 +333,21 @@ export class MobileRelayServer {
     if (req.method === 'GET' && cleanPath === '/api/pairing') {
       const addr = this.server?.address();
       const activePort = addr && typeof addr === 'object' ? addr.port : 4040;
+      const pairing = TunnelInspector.getPairingInfo(
+        activePort,
+        Boolean(this.relaySecretToken)
+      );
+      const qrPayload = TunnelInspector.generatePairingQrPayload(
+        pairing,
+        this.relaySecretToken
+      );
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
-        JSON.stringify(
-          TunnelInspector.getPairingInfo(activePort, Boolean(this.relaySecretToken))
-        )
+        JSON.stringify({
+          ...pairing,
+          qrPayload,
+        })
       );
       return;
     }

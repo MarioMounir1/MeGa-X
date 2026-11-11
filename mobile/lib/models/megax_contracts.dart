@@ -449,3 +449,33 @@ class PatchDryRunResult {
   }
 }
 
+class MobilePairingManifest {
+  final String hostname;
+  final int port;
+  final bool requiresToken;
+  final String recommendedWsUrl;
+  final String androidEmulatorWsUrl;
+  final String? qrUri;
+
+  const MobilePairingManifest({
+    required this.hostname,
+    required this.port,
+    required this.requiresToken,
+    required this.recommendedWsUrl,
+    required this.androidEmulatorWsUrl,
+    this.qrUri,
+  });
+
+  factory MobilePairingManifest.fromJson(Map<String, dynamic> json) {
+    final qr = json['qrPayload'] as Map<String, dynamic>?;
+    return MobilePairingManifest(
+      hostname: json['hostname'] as String? ?? 'localhost',
+      port: (json['port'] as num?)?.toInt() ?? 4040,
+      requiresToken: json['requiresToken'] as bool? ?? false,
+      recommendedWsUrl: json['recommendedWsUrl'] as String? ?? '',
+      androidEmulatorWsUrl: json['androidEmulatorWsUrl'] as String? ?? '',
+      qrUri: qr?['qrUri'] as String?,
+    );
+  }
+}
+

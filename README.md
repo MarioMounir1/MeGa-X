@@ -29,7 +29,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/` | `GET` | Built-in Mobile/Web Steering Wheel Dashboard |
 | `/ws` | `WS` | Bi-directional WebSocket stream (`PROMPT_SUBMIT`, `APPROVAL_DECISION`, `SET_ENGINE_MODE`, `ABORT_TASK`) |
 | `/api/status` | `GET` | Live Daemon health, connected clients, and pending approval IDs |
-| `/api/pairing` | `GET` | Auto-discovered Tailscale (`100.64.0.0/10`) & LAN WebSocket URLs |
+| `/api/pairing` | `GET` | Auto-discovered Tailscale & LAN WebSocket URLs and `megax://connect` QR deep-link payload |
 | `/api/config` | `GET` / `POST` | Inspect or dynamically switch `SINGLE_AGENT` / `MULTI_AGENT` mode |
 | `/api/agents` | `GET` | Registered AI agent roster (`claude-3-7-sonnet`, `antigravity`, `codex`, etc.) & active role assignments |
 | `/api/prompt` | `POST` | Enqueue a high-level feature prompt into the FIFO `TaskQueueManager` |
@@ -74,7 +74,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 48 automated test suites
+npm test          # Runs all 49 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 ```
