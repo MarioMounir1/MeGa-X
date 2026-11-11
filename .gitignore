@@ -22,3 +22,6 @@ mobile/build/
 build/
 *.lock
 
+# Accidental CLI redirects
+main
+
