@@ -107,5 +107,33 @@ export class TaskAuditStore {
     fs.writeFileSync(this.storeFilePath, JSON.stringify([], null, 2), 'utf-8');
     return existing.length;
   }
+
+  /**
+   * Exports the entire audit log as a formatted JSON or Markdown string.
+   */
+  public exportHistory(format: 'json' | 'markdown' = 'json'): string {
+    const history = this.readAll();
+    if (format === 'json') {
+      return JSON.stringify(history, null, 2);
+    }
+
+    const lines: string[] = [
+      '# MeGa X Task Audit Execution Report',
+      `*Generated at ${new Date().toISOString()} • Total recorded runs: ${history.length}*`,
+      '',
+      '| Task ID | Engine Mode | Status | Prompt | Recorded At |',
+      '| :--- | :--- | :--- | :--- | :--- |',
+    ];
+
+    for (const entry of history) {
+      const statusIcon = entry.overallSuccess ? '✅ PASSED' : '❌ FAILED';
+      const cleanPrompt = entry.prompt.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+      lines.push(
+        `| \`${entry.masterTaskId}\` | ${entry.engineMode} | ${statusIcon} | ${cleanPrompt} | ${entry.recordedAt} |`
+      );
+    }
+
+    return lines.join('\n');
+  }
 }
 

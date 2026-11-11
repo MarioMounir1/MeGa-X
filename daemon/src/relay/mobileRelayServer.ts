@@ -378,6 +378,25 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/history/export') {
+      const parsedUrl = new URL(
+        req.url ?? '/api/history/export',
+        'http://localhost'
+      );
+      const rawFormat = (parsedUrl.searchParams.get('format') ?? 'json').toLowerCase();
+      const format = rawFormat === 'markdown' ? 'markdown' : 'json';
+      const exported = this.engine.getAuditStore().exportHistory(format);
+
+      if (format === 'markdown') {
+        res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8' });
+        res.end(exported);
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(exported);
+      }
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/metrics') {
       const parsedUrl = new URL(req.url ?? '/api/metrics', 'http://localhost');
       const rawMode = parsedUrl.searchParams.get('mode')?.toUpperCase();
@@ -954,23 +973,52 @@ export class MobileRelayServer {
     }
 
     if (req.method === 'POST' && cleanPath === '/api/verify') {
-      void this.engine
-        .getVerificationRunner()
-        .runVerificationSuite(`manual_verify_${Date.now() % 10000}`, 1)
-        .then((result) => {
-          this.streamThrottler.flushNow();
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(result));
-        })
-        .catch((err: unknown) => {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(
-            JSON.stringify({
-              error:
-                err instanceof Error ? err.message : 'Verification failed',
-            })
-          );
-        });
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        let parsed: {
+          compileCommand?: string;
+          testCommand?: string;
+          timeoutMs?: number;
+        } = {};
+        if (body.trim().length > 0) {
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            // Ignore non-json or empty bodies
+          }
+        }
+
+        const runner = this.engine.getVerificationRunner();
+        const runPromise =
+          parsed.compileCommand || parsed.testCommand || parsed.timeoutMs
+            ? runner.runCustomVerification(
+                `manual_verify_${Date.now() % 10000}`,
+                parsed
+              )
+            : runner.runVerificationSuite(
+                `manual_verify_${Date.now() % 10000}`,
+                1
+              );
+
+        void runPromise
+          .then((result) => {
+            this.streamThrottler.flushNow();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          })
+          .catch((err: unknown) => {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(
+              JSON.stringify({
+                error:
+                  err instanceof Error ? err.message : 'Verification failed',
+              })
+            );
+          });
+      });
       return;
     }
 

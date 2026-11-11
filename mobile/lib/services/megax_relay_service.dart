@@ -236,10 +236,22 @@ class MegaXRelayService {
     }
   }
 
-  Future<bool> runManualVerification() async {
+  Future<bool> runManualVerification({
+    String? compileCommand,
+    String? testCommand,
+    int? timeoutMs,
+  }) async {
     final client = HttpClient();
     try {
       final req = await client.postUrl(Uri.parse('$_httpBaseUrl/api/verify'));
+      req.headers.contentType = ContentType.json;
+      final payload = <String, dynamic>{};
+      if (compileCommand != null) payload['compileCommand'] = compileCommand;
+      if (testCommand != null) payload['testCommand'] = testCommand;
+      if (timeoutMs != null) payload['timeoutMs'] = timeoutMs;
+      if (payload.isNotEmpty) {
+        req.write(jsonEncode(payload));
+      }
       final res = await req.close();
       final body = await res.transform(utf8.decoder).join();
       final decoded = jsonDecode(body) as Map<String, dynamic>;
@@ -371,6 +383,20 @@ class MegaXRelayService {
       final body = await res.transform(utf8.decoder).join();
       final decoded = jsonDecode(body) as Map<String, dynamic>;
       return (decoded['clearedCount'] as num?)?.toInt() ?? 0;
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<String> exportAuditHistory({String format = 'json'}) async {
+    final client = HttpClient();
+    try {
+      final uri = Uri.parse('$_httpBaseUrl/api/history/export').replace(
+        queryParameters: {'format': format},
+      );
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      return await res.transform(utf8.decoder).join();
     } finally {
       client.close();
     }

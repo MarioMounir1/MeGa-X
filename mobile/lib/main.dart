@@ -578,14 +578,38 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold),
                                     ),
-                                    TextButton(
-                                      onPressed: _connected
-                                          ? () async {
-                                              await _relay.clearAuditHistory();
-                                              await _refreshTelemetry();
-                                            }
-                                          : null,
-                                      child: const Text('Clear History'),
+                                    Wrap(
+                                      spacing: 4,
+                                      children: [
+                                        TextButton(
+                                          onPressed: _connected
+                                              ? () async {
+                                                  final md = await _relay
+                                                      .exportAuditHistory(
+                                                          format: 'markdown');
+                                                  if (!context.mounted) return;
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                          'Exported ${md.length} chars of audit history'),
+                                                    ),
+                                                  );
+                                                }
+                                              : null,
+                                          child: const Text('Export'),
+                                        ),
+                                        TextButton(
+                                          onPressed: _connected
+                                              ? () async {
+                                                  await _relay
+                                                      .clearAuditHistory();
+                                                  await _refreshTelemetry();
+                                                }
+                                              : null,
+                                          child: const Text('Clear'),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
