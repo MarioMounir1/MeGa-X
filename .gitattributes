@@ -1,0 +1,8 @@
+# Auto-normalize line endings to LF across Windows/Linux/macOS
+* text=auto eol=lf
+*.dart text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
