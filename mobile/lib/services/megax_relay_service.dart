@@ -125,10 +125,20 @@ class MegaXRelayService {
     }
   }
 
-  Future<DaemonMetricsSummary> fetchMetrics() async {
+  Future<DaemonMetricsSummary> fetchMetrics({String? mode, int? limit}) async {
     final client = HttpClient();
     try {
-      final req = await client.getUrl(Uri.parse('$_httpBaseUrl/api/metrics'));
+      final queryParams = <String, String>{};
+      if (mode != null && mode.isNotEmpty) {
+        queryParams['mode'] = mode;
+      }
+      if (limit != null && limit > 0) {
+        queryParams['limit'] = limit.toString();
+      }
+      final uri = Uri.parse('$_httpBaseUrl/api/metrics').replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      final req = await client.getUrl(uri);
       final res = await req.close();
       final body = await res.transform(utf8.decoder).join();
       return DaemonMetricsSummary.fromJson(

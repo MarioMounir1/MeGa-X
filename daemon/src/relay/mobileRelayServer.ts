@@ -379,11 +379,22 @@ export class MobileRelayServer {
     }
 
     if (req.method === 'GET' && cleanPath === '/api/metrics') {
+      const parsedUrl = new URL(req.url ?? '/api/metrics', 'http://localhost');
+      const rawMode = parsedUrl.searchParams.get('mode')?.toUpperCase();
+      const engineMode =
+        rawMode === 'SINGLE_AGENT' || rawMode === 'MULTI_AGENT'
+          ? rawMode
+          : undefined;
+      const rawLimit = parsedUrl.searchParams.get('limit');
+      const limit = rawLimit ? Number.parseInt(rawLimit, 10) : undefined;
+
       const collector = new TelemetryMetricsCollector(
         this.engine.getAuditStore()
       );
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(collector.getMetricsSummary()));
+      res.end(
+        JSON.stringify(collector.getMetricsSummary({ engineMode, limit }))
+      );
       return;
     }
 

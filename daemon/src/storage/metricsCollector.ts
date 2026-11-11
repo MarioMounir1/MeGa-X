@@ -10,6 +10,11 @@ export interface DaemonMetricsSummary {
   selfHealedPasses: number;
   rolledBackMicroTasks: number;
   averageAttemptsPerTask: number;
+  modeBreakdown?: {
+    singleAgentRuns: number;
+    multiAgentRuns: number;
+  };
+  recentHistoryWindow?: number;
 }
 
 /**
@@ -35,8 +40,16 @@ export class TelemetryMetricsCollector {
     let selfHealedPasses = 0;
     let rolledBackMicroTasks = 0;
     let totalAttemptsSum = 0;
+    let singleAgentRuns = 0;
+    let multiAgentRuns = 0;
 
     for (const run of entries) {
+      if (run.engineMode === 'SINGLE_AGENT') {
+        singleAgentRuns++;
+      } else if (run.engineMode === 'MULTI_AGENT') {
+        multiAgentRuns++;
+      }
+
       if (run.overallSuccess) {
         successfulRuns++;
       } else {
@@ -76,13 +89,30 @@ export class TelemetryMetricsCollector {
       selfHealedPasses,
       rolledBackMicroTasks,
       averageAttemptsPerTask,
+      modeBreakdown: {
+        singleAgentRuns,
+        multiAgentRuns,
+      },
+      recentHistoryWindow: entries.length,
     };
   }
 
-  public getMetricsSummary(): DaemonMetricsSummary {
-    return TelemetryMetricsCollector.computeFromEntries(
-      this.auditStore.readAll()
-    );
+  public getMetricsSummary(options?: {
+    engineMode?: 'SINGLE_AGENT' | 'MULTI_AGENT';
+    limit?: number;
+  }): DaemonMetricsSummary {
+    let entries = this.auditStore.readAll();
+    if (options?.engineMode) {
+      entries = entries.filter((e) => e.engineMode === options.engineMode);
+    }
+    if (
+      typeof options?.limit === 'number' &&
+      !Number.isNaN(options.limit) &&
+      options.limit > 0
+    ) {
+      entries = entries.slice(-options.limit);
+    }
+    return TelemetryMetricsCollector.computeFromEntries(entries);
   }
 }
 

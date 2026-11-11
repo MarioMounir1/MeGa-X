@@ -518,9 +518,11 @@ class _SteeringWheelScreenState extends State<SteeringWheelScreen> {
                             child: ListView(
                               children: [
                                 Text(
-                                    'Total Runs: ${_metrics?.totalRuns ?? 0}'),
+                                    'Total Runs: ${_metrics?.totalRuns ?? 0} (Single: ${_metrics?.singleAgentRuns ?? 0}, Multi: ${_metrics?.multiAgentRuns ?? 0})'),
                                 Text(
                                     'Success Rate: ${_metrics?.successRatePercent ?? 100}%'),
+                                Text(
+                                    'Average Attempts/Task: ${_metrics?.averageAttemptsPerTask ?? 0.0}'),
                                 Text(
                                     'First-Attempt Passes: ${_metrics?.firstAttemptPasses ?? 0}'),
                                 Text(

@@ -113,6 +113,9 @@ class DaemonMetricsSummary {
   final int firstAttemptPasses;
   final int selfHealedPasses;
   final int rolledBackMicroTasks;
+  final double averageAttemptsPerTask;
+  final int singleAgentRuns;
+  final int multiAgentRuns;
 
   const DaemonMetricsSummary({
     required this.totalRuns,
@@ -121,9 +124,13 @@ class DaemonMetricsSummary {
     required this.firstAttemptPasses,
     required this.selfHealedPasses,
     required this.rolledBackMicroTasks,
+    this.averageAttemptsPerTask = 0.0,
+    this.singleAgentRuns = 0,
+    this.multiAgentRuns = 0,
   });
 
   factory DaemonMetricsSummary.fromJson(Map<String, dynamic> json) {
+    final mode = json['modeBreakdown'] as Map<String, dynamic>? ?? const {};
     return DaemonMetricsSummary(
       totalRuns: (json['totalRuns'] as num?)?.toInt() ?? 0,
       successfulRuns: (json['successfulRuns'] as num?)?.toInt() ?? 0,
@@ -132,6 +139,10 @@ class DaemonMetricsSummary {
       selfHealedPasses: (json['selfHealedPasses'] as num?)?.toInt() ?? 0,
       rolledBackMicroTasks:
           (json['rolledBackMicroTasks'] as num?)?.toInt() ?? 0,
+      averageAttemptsPerTask:
+          (json['averageAttemptsPerTask'] as num?)?.toDouble() ?? 0.0,
+      singleAgentRuns: (mode['singleAgentRuns'] as num?)?.toInt() ?? 0,
+      multiAgentRuns: (mode['multiAgentRuns'] as num?)?.toInt() ?? 0,
     );
   }
 }
