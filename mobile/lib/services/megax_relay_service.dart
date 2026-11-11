@@ -574,6 +574,29 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<WorkspaceSearchMatch>> searchWorkspaceCode(
+    String query, {
+    int limit = 50,
+  }) async {
+    final client = HttpClient();
+    try {
+      final uri = Uri.parse('$_httpBaseUrl/api/search').replace(
+        queryParameters: {'q': query, 'limit': limit.toString()},
+      );
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return (decoded['matches'] as List<dynamic>?)
+              ?.map((e) =>
+                  WorkspaceSearchMatch.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [];
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;

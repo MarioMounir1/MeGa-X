@@ -741,6 +741,33 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/search') {
+      const parsedUrl = new URL(req.url ?? '/api/search', 'http://localhost');
+      const query = (parsedUrl.searchParams.get('q') ?? '').trim();
+      if (!query) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Query parameter "q" is required' }));
+        return;
+      }
+      const rawLimit = parsedUrl.searchParams.get('limit');
+      const parsedLimit = rawLimit ? Number.parseInt(rawLimit, 10) : 50;
+      const limit =
+        !Number.isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : 50;
+
+      const matches = this.engine
+        .getWorkspaceScanner()
+        .searchCodeContents(query, limit);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          query,
+          matches,
+          totalMatches: matches.length,
+        })
+      );
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/agents') {
       const summary = this.engine
         .getAgentRegistry()

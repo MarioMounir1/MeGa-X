@@ -364,3 +364,23 @@ class GitStashEntry {
   }
 }
 
+class WorkspaceSearchMatch {
+  final String path;
+  final int lineNumber;
+  final String lineText;
+
+  const WorkspaceSearchMatch({
+    required this.path,
+    required this.lineNumber,
+    required this.lineText,
+  });
+
+  factory WorkspaceSearchMatch.fromJson(Map<String, dynamic> json) {
+    return WorkspaceSearchMatch(
+      path: json['path'] as String? ?? '',
+      lineNumber: (json['lineNumber'] as num?)?.toInt() ?? 1,
+      lineText: json['lineText'] as String? ?? '',
+    );
+  }
+}
+

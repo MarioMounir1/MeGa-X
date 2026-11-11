@@ -37,6 +37,12 @@ export interface WorkspaceFileEntry {
   modifiedAt: string;
 }
 
+export interface WorkspaceSearchMatch {
+  path: string;
+  lineNumber: number;
+  lineText: string;
+}
+
 /**
  * Automatically discovers and ranks relevant source files in the workspace
  * for a high-level mobile prompt so developers don't have to type file paths on mobile.
@@ -160,6 +166,52 @@ export class WorkspaceScanner {
       path: item.relPath,
       content: item.content,
     }));
+  }
+
+  /**
+   * Searches inside candidate workspace source files for a case-insensitive substring query
+   * and returns matching file paths, 1-based line numbers, and line snippets.
+   */
+  public searchCodeContents(
+    query: string,
+    maxMatches = 50
+  ): WorkspaceSearchMatch[] {
+    const cleanQuery = query.trim().toLowerCase();
+    if (!cleanQuery) {
+      return [];
+    }
+
+    const candidates = this.listCandidateFiles();
+    const matches: WorkspaceSearchMatch[] = [];
+
+    for (const relPath of candidates) {
+      if (matches.length >= maxMatches) {
+        break;
+      }
+      const fullPath = path.join(this.workspaceRoot, relPath);
+      let content: string;
+      try {
+        content = fs.readFileSync(fullPath, 'utf-8');
+      } catch {
+        continue;
+      }
+
+      const lines = content.split(/\r?\n/);
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].toLowerCase().includes(cleanQuery)) {
+          matches.push({
+            path: relPath,
+            lineNumber: i + 1,
+            lineText: lines[i].trim().slice(0, 200),
+          });
+          if (matches.length >= maxMatches) {
+            break;
+          }
+        }
+      }
+    }
+
+    return matches;
   }
 }
 
