@@ -69,6 +69,78 @@ export class FilePatcher {
     return directResolved;
   }
 
+  public getMaxFileBytes(): number {
+    return this.maxFileBytes;
+  }
+
+  /**
+   * Performs an in-memory dry-run validation of a FileDiff batch, checking path safety,
+   * size boundaries, and computing simulated before/after line counts without writing to disk.
+   */
+  public dryRunDiffBatch(fileDiffs: FileDiff[]): {
+    valid: boolean;
+    modifiedCount: number;
+    createdCount: number;
+    deletedCount: number;
+    simulatedFiles: {
+      path: string;
+      action: FileDiff['action'];
+      existsBefore: boolean;
+      sizeBytes: number;
+    }[];
+  } {
+    this.validateDiffBatch(fileDiffs);
+
+    let createdCount = 0;
+    let modifiedCount = 0;
+    let deletedCount = 0;
+    const simulatedFiles: {
+      path: string;
+      action: FileDiff['action'];
+      existsBefore: boolean;
+      sizeBytes: number;
+    }[] = [];
+
+    for (const diff of fileDiffs) {
+      const fullPath = this.resolveSafePath(diff.path);
+      const existsBefore = fs.existsSync(fullPath);
+
+      if (diff.action === 'CREATE') {
+        createdCount++;
+        simulatedFiles.push({
+          path: diff.path,
+          action: 'CREATE',
+          existsBefore,
+          sizeBytes: Buffer.byteLength(diff.content ?? '', 'utf-8'),
+        });
+      } else if (diff.action === 'UPDATE') {
+        modifiedCount++;
+        simulatedFiles.push({
+          path: diff.path,
+          action: 'UPDATE',
+          existsBefore,
+          sizeBytes: Buffer.byteLength(diff.content ?? '', 'utf-8'),
+        });
+      } else if (diff.action === 'DELETE') {
+        deletedCount++;
+        simulatedFiles.push({
+          path: diff.path,
+          action: 'DELETE',
+          existsBefore,
+          sizeBytes: 0,
+        });
+      }
+    }
+
+    return {
+      valid: true,
+      modifiedCount,
+      createdCount,
+      deletedCount,
+      simulatedFiles,
+    };
+  }
+
   /**
    * Applies an array of FileDiff operations (CREATE, UPDATE, DELETE) to the workspace.
    */

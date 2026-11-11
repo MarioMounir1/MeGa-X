@@ -423,3 +423,29 @@ class SecurityGateSummary {
   }
 }
 
+class PatchDryRunResult {
+  final bool valid;
+  final int modifiedCount;
+  final int createdCount;
+  final int deletedCount;
+  final String? error;
+
+  const PatchDryRunResult({
+    required this.valid,
+    required this.modifiedCount,
+    required this.createdCount,
+    required this.deletedCount,
+    this.error,
+  });
+
+  factory PatchDryRunResult.fromJson(Map<String, dynamic> json) {
+    return PatchDryRunResult(
+      valid: json['valid'] as bool? ?? false,
+      modifiedCount: (json['modifiedCount'] as num?)?.toInt() ?? 0,
+      createdCount: (json['createdCount'] as num?)?.toInt() ?? 0,
+      deletedCount: (json['deletedCount'] as num?)?.toInt() ?? 0,
+      error: json['error'] as String?,
+    );
+  }
+}
+

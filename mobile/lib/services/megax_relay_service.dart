@@ -673,6 +673,24 @@ class MegaXRelayService {
     }
   }
 
+  Future<PatchDryRunResult> dryRunDiffBatch(
+    List<Map<String, dynamic>> fileDiffs,
+  ) async {
+    final client = HttpClient();
+    try {
+      final req =
+          await client.postUrl(Uri.parse('$_httpBaseUrl/api/patch/dry-run'));
+      req.headers.contentType = ContentType.json;
+      req.write(jsonEncode({'fileDiffs': fileDiffs}));
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return PatchDryRunResult.fromJson(decoded);
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> disconnect() async {
     await _socket?.close();
     _socket = null;
