@@ -66,6 +66,8 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax init [dir]                  Create a megax.config.json in [dir]',
       '  megax status [--config <path>]    Display project config and audit history',
       '  megax doctor [--config <path>]    Run system readiness & environment check',
+      '  megax verify [--config <path>]    Run compile & test verification suite',
+      '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
       '  megax serve [--port <number>]     Start Mobile Relay Server & Web UI',
     ].join('\n');
@@ -135,6 +137,61 @@ export async function runMegaXCli(args: string[]): Promise<{
     ].join('\n');
 
     return { exitCode: 0, output: summary };
+  }
+
+  if (command === 'verify') {
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const runner = engine.getVerificationRunner();
+    const result = await runner.runVerificationSuite(
+      `cli_verify_${Date.now() % 10000}`,
+      1
+    );
+
+    const output = [
+      `=== MeGa X Verification Result ===`,
+      `Passed       : ${result.passed ? 'YES' : 'NO'}`,
+      `Compile Step : ${result.compileResult.passed ? 'PASSED' : 'FAILED'} (${result.compileResult.durationMs}ms)`,
+      result.testResult
+        ? `Test Step    : ${result.testResult.passed ? 'PASSED' : 'FAILED'} (${result.testResult.durationMs}ms)`
+        : 'Test Step    : SKIPPED',
+      result.errorLog ? `\nDiagnostics:\n${result.errorLog}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    return {
+      exitCode: result.passed ? 0 : 1,
+      output,
+    };
+  }
+
+  if (command === 'diff') {
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const git = engine.getGitManager();
+    const diff = git.getWorkingTreeDiff();
+
+    const output = [
+      `Branch  : ${diff.currentBranch}`,
+      `Status  : ${diff.statusLines.length === 0 ? 'Clean' : diff.statusLines.join(', ')}`,
+      diff.unifiedDiff ? `\nDiff:\n${diff.unifiedDiff}` : '\nNo uncommitted changes.',
+    ].join('\n');
+
+    return {
+      exitCode: 0,
+      output,
+    };
   }
 
   if (command === 'run') {

@@ -52,7 +52,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/files` | `GET` | Workspace source file index (`?query=` substring search) |
 | `/api/file` | `GET` | Safe workspace file inspector (`?path=`) with path-traversal & secret-file guards |
 | `/api/search` | `GET` | Workspace source code content search (`?q=&limit=`) returning file, line number, and snippet |
-| `/api/verify` | `POST` | Trigger an on-demand compile + test verification run from mobile |
+| `/api/verify` | `POST` | Trigger compile + test verification run with optional custom overrides (`compileCommand`, `testCommand`, `timeoutMs`) |
 | `/api/diagnostics` | `GET` | Redacted environment & AI provider key diagnostics |
 | `/api/logs` | `GET` | Bounded terminal scrollback ring buffer (`?stream=stdout\|stderr\|system&taskId=&limit=`) |
 | `/api/logs/clear` | `POST` | Clear the bounded terminal scrollback ring buffer |
@@ -71,7 +71,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 43 automated test suites
+npm test          # Runs all 45 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 ```
