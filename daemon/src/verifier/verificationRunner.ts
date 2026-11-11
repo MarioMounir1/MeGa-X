@@ -50,6 +50,14 @@ export class VerificationRunner {
     this.commandTimeoutMs = timeoutMs;
   }
 
+  public getCommandTimeoutMs(): number {
+    return this.commandTimeoutMs;
+  }
+
+  public getVerificationConfig(): VerificationConfig {
+    return { ...this.config };
+  }
+
   public setStreamListener(listener: TerminalStreamListener): void {
     this.streamListener = listener;
   }
@@ -218,6 +226,76 @@ export class VerificationRunner {
       `Output / Stack Trace:`,
       combinedOutput || '(No stdout/stderr output captured)',
     ].join('\n');
+  }
+
+  /**
+   * Runs an arbitrary verification command (or suite) with optional custom command override.
+   */
+  public async runCustomVerification(
+    taskId: string,
+    options?: {
+      compileCommand?: string;
+      testCommand?: string;
+      timeoutMs?: number;
+    }
+  ): Promise<VerificationSuiteResult> {
+    const compileCmd = options?.compileCommand ?? this.config.compileCommand;
+    const testCmd = options?.testCommand ?? this.config.testCommand;
+    const origTimeout = this.commandTimeoutMs;
+
+    if (typeof options?.timeoutMs === 'number' && options.timeoutMs > 0) {
+      this.commandTimeoutMs = options.timeoutMs;
+    }
+
+    try {
+      const compileResult = await this.runCommand(taskId, compileCmd, 1);
+      if (!compileResult.passed) {
+        return {
+          passed: false,
+          attempt: 1,
+          compileResult,
+          errorLog: VerificationRunner.formatErrorLog(
+            'COMPILE_STEP',
+            compileResult,
+            1,
+            this.config.maxFixAttempts
+          ),
+        };
+      }
+
+      if (!testCmd || testCmd.trim() === '') {
+        return {
+          passed: true,
+          attempt: 1,
+          compileResult,
+        };
+      }
+
+      const testResult = await this.runCommand(taskId, testCmd, 1);
+      if (!testResult.passed) {
+        return {
+          passed: false,
+          attempt: 1,
+          compileResult,
+          testResult,
+          errorLog: VerificationRunner.formatErrorLog(
+            'TEST_STEP',
+            testResult,
+            1,
+            this.config.maxFixAttempts
+          ),
+        };
+      }
+
+      return {
+        passed: true,
+        attempt: 1,
+        compileResult,
+        testResult,
+      };
+    } finally {
+      this.commandTimeoutMs = origTimeout;
+    }
   }
 
   /**

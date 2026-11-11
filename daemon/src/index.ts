@@ -3,6 +3,7 @@ import { loadMegaXConfig } from './config/configLoader';
 import { OrchestratorEngine } from './orchestrator/orchestratorEngine';
 import { FcmDispatcher } from './relay/fcmDispatcher';
 import { MobileRelayServer } from './relay/mobileRelayServer';
+import { MegaXConfig } from './types/contracts';
 import {
   AntiGravityAgentAdapter,
   ClaudeAgentAdapter,
@@ -68,6 +69,38 @@ export function bootstrapDaemon(configPath?: string): OrchestratorEngine {
     config,
     agentRegistry: createLiveAgentRegistry(),
   });
+}
+
+export interface DaemonInstanceSummary {
+  version: string;
+  projectName: string;
+  engineMode: MegaXConfig['engineMode'];
+  workspaceRoot: string;
+  endpoints: {
+    dashboardUrl: string;
+    wsUrl: string;
+    pairingUrl: string;
+  };
+}
+
+export function getDaemonInstanceSummary(
+  engine: OrchestratorEngine,
+  port: number
+): DaemonInstanceSummary {
+  const cfg = engine.getConfig();
+  return {
+    version: '1.0.0',
+    projectName: cfg.projectName,
+    engineMode: cfg.engineMode,
+    workspaceRoot: engine.getGitManager().isGitRepository()
+      ? path.resolve('.')
+      : 'workspace',
+    endpoints: {
+      dashboardUrl: `http://localhost:${port}/`,
+      wsUrl: `ws://localhost:${port}/ws`,
+      pairingUrl: `http://localhost:${port}/api/pairing`,
+    },
+  };
 }
 
 export async function startDaemonRelayServer(
