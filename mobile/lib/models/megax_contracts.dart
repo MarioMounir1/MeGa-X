@@ -479,3 +479,36 @@ class MobilePairingManifest {
   }
 }
 
+class DaemonInstanceSummary {
+  final String version;
+  final String projectName;
+  final String engineMode;
+  final String workspaceRoot;
+  final String dashboardUrl;
+  final String wsUrl;
+  final String pairingUrl;
+
+  const DaemonInstanceSummary({
+    required this.version,
+    required this.projectName,
+    required this.engineMode,
+    required this.workspaceRoot,
+    required this.dashboardUrl,
+    required this.wsUrl,
+    required this.pairingUrl,
+  });
+
+  factory DaemonInstanceSummary.fromJson(Map<String, dynamic> json) {
+    final endpoints = json['endpoints'] as Map<String, dynamic>? ?? const {};
+    return DaemonInstanceSummary(
+      version: json['version'] as String? ?? '1.0.0',
+      projectName: json['projectName'] as String? ?? '',
+      engineMode: json['engineMode'] as String? ?? 'SINGLE_AGENT',
+      workspaceRoot: json['workspaceRoot'] as String? ?? '',
+      dashboardUrl: endpoints['dashboardUrl'] as String? ?? '',
+      wsUrl: endpoints['wsUrl'] as String? ?? '',
+      pairingUrl: endpoints['pairingUrl'] as String? ?? '',
+    );
+  }
+}
+

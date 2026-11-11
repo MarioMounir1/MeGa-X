@@ -74,9 +74,17 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 51 automated test suites
+npm test          # Runs all 52 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
+```
+
+### 📱 Mobile Steering Wheel (Flutter)
+
+```powershell
+cd mobile
+flutter test      # Runs mobile unit & contract tests
+flutter analyze   # Verifies static analysis
 ```
 
 ### 🐳 Docker & Docker Compose Deployment

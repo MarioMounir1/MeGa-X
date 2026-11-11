@@ -42,23 +42,33 @@ class MegaXRelayService {
 
         switch (type) {
           case 'TERMINAL_STREAM':
-            _terminalController.add(TerminalStreamEvent.fromJson(payload));
+            if (!_terminalController.isClosed) {
+              _terminalController.add(TerminalStreamEvent.fromJson(payload));
+            }
             break;
           case 'STATE_CHANGE':
-            _stateController.add(TaskStateChangeEvent.fromJson(payload));
+            if (!_stateController.isClosed) {
+              _stateController.add(TaskStateChangeEvent.fromJson(payload));
+            }
             break;
           case 'APPROVAL_REQUIRED':
-            _approvalController.add(ApprovalRequestPayload.fromJson(payload));
+            if (!_approvalController.isClosed) {
+              _approvalController.add(ApprovalRequestPayload.fromJson(payload));
+            }
             break;
         }
       },
       onDone: () {
         _socket = null;
-        _connectionController.add(false);
+        if (!_connectionController.isClosed) {
+          _connectionController.add(false);
+        }
       },
       onError: (_) {
         _socket = null;
-        _connectionController.add(false);
+        if (!_connectionController.isClosed) {
+          _connectionController.add(false);
+        }
       },
     );
   }
@@ -705,17 +715,22 @@ class MegaXRelayService {
   }
 
   Future<void> disconnect() async {
-    await _socket?.close();
+    final s = _socket;
     _socket = null;
-    _connectionController.add(false);
+    await s?.close();
+    if (!_connectionController.isClosed) {
+      _connectionController.add(false);
+    }
   }
 
   void dispose() {
-    disconnect();
-    _terminalController.close();
-    _stateController.close();
-    _approvalController.close();
-    _connectionController.close();
+    final s = _socket;
+    _socket = null;
+    s?.close();
+    if (!_terminalController.isClosed) _terminalController.close();
+    if (!_stateController.isClosed) _stateController.close();
+    if (!_approvalController.isClosed) _approvalController.close();
+    if (!_connectionController.isClosed) _connectionController.close();
   }
 }
 
