@@ -57,3 +57,4 @@ describe('Phase 54: Embedded Web Steering Wheel ANSI Terminal Renderer (xterm & 
     assert.ok(html.includes('autoscroll-chk'));
   });
 });
+

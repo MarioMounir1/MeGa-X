@@ -110,3 +110,4 @@ export function colorize(
   const pair = codes[color] ?? [0, 0];
   return `\x1b[${pair[0]}m${text}\x1b[${pair[1]}m`;
 }
+
