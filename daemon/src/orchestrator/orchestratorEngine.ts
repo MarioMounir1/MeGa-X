@@ -19,6 +19,7 @@ import {
 import { AgentConsensusEngine, AgentVote, ConsensusEvaluation } from './consensusEngine';
 import { TokenBudgetManager } from '../agents/tokenBudgetManager';
 import { CircuitBreakerSentinel } from '../agents/circuitBreakerSentinel';
+import { ThoughtTraceRecorder } from '../agents/thoughtTraceRecorder';
 
 export interface TaskStateChangeEvent {
   taskId: string;
@@ -71,6 +72,7 @@ export class OrchestratorEngine {
   private readonly consensusEngine = new AgentConsensusEngine();
   private readonly budgetManager = new TokenBudgetManager();
   private readonly circuitBreaker = new CircuitBreakerSentinel();
+  private readonly thoughtRecorder = new ThoughtTraceRecorder();
   private stateListener?: StateChangeListener;
   private lastStateEvent: TaskStateChangeEvent | null = null;
   private abortRequested = false;
@@ -126,6 +128,10 @@ export class OrchestratorEngine {
 
   public getCircuitBreaker(): CircuitBreakerSentinel {
     return this.circuitBreaker;
+  }
+
+  public getThoughtTraceRecorder(): ThoughtTraceRecorder {
+    return this.thoughtRecorder;
   }
 
   public getConfig(): MegaXConfig {

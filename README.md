@@ -83,6 +83,9 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/circuit` | `GET` | Live AI agent circuit breaker status, trip counter, and fallback routing |
 | `/api/circuit/trip` | `POST` | Manually trip the circuit breaker to OPEN state (panic kill-switch) |
 | `/api/circuit/reset` | `POST` | Reset the circuit breaker to CLOSED normal operation |
+| `/api/thoughts` | `GET` | Retrieve AI reasoning chain and thought traces for a task (`?taskId=&limit=`) |
+| `/api/thoughts` | `POST` | Record a thought trace step (`{ taskId, agentId, category, content }`) |
+| `/api/thoughts/clear` | `POST` | Clear recorded thought trace entries (`{ taskId }`) |
 
 ---
 
@@ -92,7 +95,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 67 automated test suites (123 tests)
+npm test          # Runs all 68 automated test suites (126 tests)
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 npx megax health  # Generates ecosystem diagnostic health report
@@ -100,6 +103,7 @@ npx megax notes   # Generates formatted release notes from Git commit history
 npx megax budget  # Inspects AI token consumption and cost budget
 npx megax state   # Manages persistent workspace state entries
 npx megax circuit # Inspects and controls agent circuit breaker sentinel
+npx megax trace <id> # Displays chain-of-thought reasoning steps for a task
 npx megax benchmark # Runs autonomous self-healing benchmark scenarios
 ```
 

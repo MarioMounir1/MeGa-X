@@ -122,3 +122,4 @@ describe('Phase 67: Agent Execution Circuit Breaker & Fault Recovery Sentinel', 
     assert.ok(resetRes.output.includes('Reset agent circuit breaker to CLOSED state'));
   });
 });
+

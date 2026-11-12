@@ -76,6 +76,7 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax budget [--config <path>]    Display AI token usage and cost budget',
       '  megax state [get|set|list|clear]  Manage persistent workspace state entries',
       '  megax circuit [status|trip|reset] Inspect or manage agent circuit breaker',
+      '  megax trace <taskId>              Display reasoning chain and thought trace',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -329,6 +330,33 @@ export async function runMegaXCli(args: string[]): Promise<{
     ];
     return {
       exitCode: st.state === 'OPEN' ? 1 : 0,
+      output: lines.join('\n'),
+    };
+  }
+
+  if (command === 'trace') {
+    const taskId = rest[0];
+    if (!taskId) {
+      return { exitCode: 1, output: 'Error: Task ID required. Usage: megax trace <taskId>' };
+    }
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const trace = engine.getThoughtTraceRecorder().getTrace(taskId);
+
+    const lines = [
+      `=== MeGa X Thought Trace: ${taskId} (${trace.totalSteps} steps) ===`,
+      `Agents Involved: ${trace.agentsInvolved.join(', ') || 'None'}`,
+    ];
+    for (const step of trace.steps) {
+      lines.push(`  [#${step.stepIndex}] [${step.category}] [${step.agentId}]: ${step.content}`);
+    }
+    return {
+      exitCode: 0,
       output: lines.join('\n'),
     };
   }

@@ -1271,6 +1271,71 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/thoughts') {
+      const parsedUrl = new URL(req.url ?? '/api/thoughts', 'http://localhost');
+      const taskId = parsedUrl.searchParams.get('taskId');
+      const rawLimit = parsedUrl.searchParams.get('limit');
+      const limit = rawLimit ? Number.parseInt(rawLimit, 10) : undefined;
+      const recorder = this.engine.getThoughtTraceRecorder();
+
+      if (taskId) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(recorder.getTrace(taskId, limit)));
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ activeTasks: recorder.listActiveTaskTraces() }));
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/thoughts') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body);
+          const step = this.engine.getThoughtTraceRecorder().recordStep({
+            taskId: String(parsed.taskId || 'default'),
+            agentId: String(parsed.agentId || 'orchestrator'),
+            category: parsed.category || 'ANALYSIS',
+            content: String(parsed.content || ''),
+          });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, step }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/thoughts/clear') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = body.trim() ? JSON.parse(body) : {};
+          const recorder = this.engine.getThoughtTraceRecorder();
+          if (parsed.taskId) {
+            recorder.clearTrace(parsed.taskId);
+          } else {
+            recorder.clearAll();
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/security') {
       const summary = this.engine.getSecurityGate().getSecuritySummary();
       res.writeHead(200, { 'Content-Type': 'application/json' });
