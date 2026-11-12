@@ -1236,6 +1236,41 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/circuit') {
+      const cb = this.engine.getCircuitBreaker();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(cb.getStatus()));
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/circuit/trip') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = body.trim() ? JSON.parse(body) : {};
+          const cb = this.engine.getCircuitBreaker();
+          cb.tripManually(parsed.reason);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, status: cb.getStatus() }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/circuit/reset') {
+      const cb = this.engine.getCircuitBreaker();
+      cb.reset();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, status: cb.getStatus() }));
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/security') {
       const summary = this.engine.getSecurityGate().getSecuritySummary();
       res.writeHead(200, { 'Content-Type': 'application/json' });

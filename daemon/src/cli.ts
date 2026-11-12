@@ -75,6 +75,7 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax notes [--version <v>]       Generate release notes from Git history',
       '  megax budget [--config <path>]    Display AI token usage and cost budget',
       '  megax state [get|set|list|clear]  Manage persistent workspace state entries',
+      '  megax circuit [status|trip|reset] Inspect or manage agent circuit breaker',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -288,6 +289,48 @@ export async function runMegaXCli(args: string[]): Promise<{
       count > 0 ? JSON.stringify(all, null, 2) : '  (empty)',
     ].join('\n');
     return { exitCode: 0, output };
+  }
+
+  if (command === 'circuit') {
+    const sub = rest[0] || 'status';
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const cb = engine.getCircuitBreaker();
+
+    if (sub === 'trip') {
+      cb.tripManually('Triggered via CLI');
+      return {
+        exitCode: 0,
+        output: 'Tripped agent circuit breaker to OPEN state.',
+      };
+    }
+
+    if (sub === 'reset') {
+      cb.reset();
+      return {
+        exitCode: 0,
+        output: 'Reset agent circuit breaker to CLOSED state.',
+      };
+    }
+
+    const st = cb.getStatus();
+    const lines = [
+      '=== MeGa X Agent Circuit Breaker Sentinel ===',
+      `State               : ${st.state}`,
+      `Consecutive Failures: ${st.consecutiveFailures}/${st.failureThreshold}`,
+      `Total Trips         : ${st.totalTrips}`,
+      `Reset Timeout       : ${st.resetTimeoutMs}ms`,
+      `Fallback Agent      : ${st.fallbackAgent ?? 'NONE'}`,
+    ];
+    return {
+      exitCode: st.state === 'OPEN' ? 1 : 0,
+      output: lines.join('\n'),
+    };
   }
 
   if (command === 'benchmark') {

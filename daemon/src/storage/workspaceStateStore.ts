@@ -73,3 +73,4 @@ export class WorkspaceStateStore {
     this.writeState({});
   }
 }
+

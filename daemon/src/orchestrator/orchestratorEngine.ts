@@ -18,6 +18,7 @@ import {
 } from '../verifier/verificationRunner';
 import { AgentConsensusEngine, AgentVote, ConsensusEvaluation } from './consensusEngine';
 import { TokenBudgetManager } from '../agents/tokenBudgetManager';
+import { CircuitBreakerSentinel } from '../agents/circuitBreakerSentinel';
 
 export interface TaskStateChangeEvent {
   taskId: string;
@@ -69,6 +70,7 @@ export class OrchestratorEngine {
   private readonly verificationRunner: VerificationRunner;
   private readonly consensusEngine = new AgentConsensusEngine();
   private readonly budgetManager = new TokenBudgetManager();
+  private readonly circuitBreaker = new CircuitBreakerSentinel();
   private stateListener?: StateChangeListener;
   private lastStateEvent: TaskStateChangeEvent | null = null;
   private abortRequested = false;
@@ -120,6 +122,10 @@ export class OrchestratorEngine {
 
   public getBudgetManager(): TokenBudgetManager {
     return this.budgetManager;
+  }
+
+  public getCircuitBreaker(): CircuitBreakerSentinel {
+    return this.circuitBreaker;
   }
 
   public getConfig(): MegaXConfig {
