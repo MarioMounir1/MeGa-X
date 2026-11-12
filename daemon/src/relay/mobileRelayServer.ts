@@ -1451,7 +1451,7 @@ export class MobileRelayServer {
   }
 
   /**
-   * Built-in Mobile/Web Steering Wheel Dashboard served at GET /
+   * Built-in Mobile/Web Steering Wheel Dashboard served at GET / with ANSI Terminal Renderer
    */
   public static renderWebSteeringWheelHtml(): string {
     return `<!DOCTYPE html>
@@ -1461,17 +1461,61 @@ export class MobileRelayServer {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MeGa X • Mobile Steering Wheel</title>
   <style>
-    :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --accent: #58a6ff; --green: #3fb950; --red: #f85149; --text: #c9d1d9; }
+    :root {
+      --bg: #0d1117; --card: #161b22; --border: #30363d; --accent: #58a6ff;
+      --green: #3fb950; --red: #f85149; --yellow: #d29922; --purple: #bc8cff;
+      --text: #c9d1d9; --muted: #8b949e; --term-bg: #010409;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 16px; display: flex; flex-direction: column; height: 100vh; gap: 12px; }
-    header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); }
-    .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #21262d; color: var(--accent); }
-    #approval-card { display: none; background: #3d1a1a; border: 1px solid var(--red); padding: 12px; border-radius: 8px; }
-    #terminal { flex: 1; background: #010409; border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-y: auto; font-family: monospace; font-size: 13px; white-space: pre-wrap; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text); padding: 16px; display: flex;
+      flex-direction: column; height: 100vh; gap: 12px;
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--card); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);
+    }
+    .badge {
+      padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      background: #21262d; color: var(--accent); transition: all 0.2s ease;
+    }
+    .badge.green { color: var(--green); }
+    .badge.yellow { color: var(--yellow); }
+    .badge.red { color: var(--red); }
+    #approval-card {
+      display: none; background: #3d1a1a; border: 1px solid var(--red); padding: 12px; border-radius: 8px;
+    }
+    .term-wrapper {
+      flex: 1; display: flex; flex-direction: column; background: var(--term-bg);
+      border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    .term-toolbar {
+      display: flex; justify-content: space-between; align-items: center; background: #0d1117;
+      padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted);
+    }
+    .term-toolbar-left, .term-toolbar-right { display: flex; gap: 8px; align-items: center; }
+    .filter-btn {
+      background: #21262d; color: var(--text); border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;
+    }
+    .filter-btn.active { background: var(--accent); color: #000; font-weight: 600; }
+    #terminal {
+      flex: 1; padding: 12px; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, "Cascadia Code", monospace;
+      font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-all;
+    }
     .prompt-bar { display: flex; gap: 8px; }
-    input { flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 6px; }
-    button { background: var(--accent); color: #000; font-weight: 600; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; }
+    input {
+      flex: 1; background: var(--card); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 12px; border-radius: 6px;
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+    button {
+      background: var(--accent); color: #000; font-weight: 600; border: none;
+      padding: 10px 16px; border-radius: 6px; cursor: pointer;
+    }
     button.danger { background: var(--red); color: #fff; }
+    button.secondary { background: #21262d; color: var(--text); border: 1px solid var(--border); }
   </style>
 </head>
 <body>
@@ -1482,41 +1526,159 @@ export class MobileRelayServer {
       <span class="badge" id="state-badge">CONNECTING...</span>
     </div>
   </header>
+
   <div id="approval-card">
     <div id="approval-text" style="margin-bottom:8px;font-weight:600;"></div>
-    <button onclick="sendDecision(true)">APPROVE</button>
-    <button class="danger" onclick="sendDecision(false)">REJECT & ROLLBACK</button>
+    <div style="display:flex;gap:8px;">
+      <button onclick="sendDecision(true)">APPROVE</button>
+      <button class="danger" onclick="sendDecision(false)">REJECT & ROLLBACK</button>
+    </div>
   </div>
-  <div id="terminal">Waiting for live Daemon telemetry...\\n</div>
+
+  <div class="term-wrapper">
+    <div class="term-toolbar">
+      <div class="term-toolbar-left">
+        <span>Filter:</span>
+        <button class="filter-btn active" onclick="setFilter('ALL')">ALL</button>
+        <button class="filter-btn" onclick="setFilter('stdout')">STDOUT</button>
+        <button class="filter-btn" onclick="setFilter('stderr')">STDERR</button>
+        <button class="filter-btn" onclick="setFilter('system')">SYSTEM</button>
+      </div>
+      <div class="term-toolbar-right">
+        <label style="display:flex;gap:4px;align-items:center;cursor:pointer;">
+          <input type="checkbox" id="autoscroll-chk" checked style="flex:none;" /> Auto-Scroll
+        </label>
+        <button class="filter-btn" onclick="clearTerminal()">Clear</button>
+        <span id="log-count">0 chunks</span>
+      </div>
+    </div>
+    <div id="terminal"></div>
+  </div>
+
   <div class="prompt-bar">
-    <input id="prompt-input" placeholder="Enter high-level feature prompt for MeGa X..." />
+    <input id="prompt-input" placeholder="Enter high-level feature prompt for MeGa X..." onkeydown="if(event.key==='Enter')submitPrompt()" />
     <button onclick="submitPrompt()">Dispatch</button>
     <button class="danger" onclick="abortTask()">Abort & Rollback</button>
   </div>
+
   <script>
+    const ANSI_PALETTE = {
+      '30': '#484f58', '31': '#f85149', '32': '#3fb950', '33': '#d29922',
+      '34': '#58a6ff', '35': '#bc8cff', '36': '#39c5cf', '37': '#b1bac4',
+      '90': '#6e7681', '91': '#ff7b72', '92': '#56d364', '93': '#e3b341',
+      '94': '#79c0ff', '95': '#d2a8ff', '96': '#56d4dd', '97': '#f0f6fc'
+    };
+
+    function escapeHtmlText(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function renderAnsiString(raw) {
+      const sanitized = escapeHtmlText(raw);
+      const regex = /\\x1b\\[([0-9;]*)m/g;
+      let out = '';
+      let lastIdx = 0;
+      let activeColor = null;
+      let isBold = false;
+      let match;
+      while ((match = regex.exec(sanitized)) !== null) {
+        out += sanitized.slice(lastIdx, match.index);
+        lastIdx = regex.lastIndex;
+        const codes = match[1] ? match[1].split(';') : ['0'];
+        for (const code of codes) {
+          if (code === '0' || code === '') {
+            if (activeColor || isBold) { out += '</span>'; activeColor = null; isBold = false; }
+          } else if (code === '1') {
+            isBold = true;
+          } else if (ANSI_PALETTE[code]) {
+            if (activeColor || isBold) { out += '</span>'; }
+            activeColor = ANSI_PALETTE[code];
+            out += '<span style="color:' + activeColor + ';' + (isBold ? 'font-weight:bold;' : '') + '">';
+          }
+        }
+      }
+      out += sanitized.slice(lastIdx);
+      if (activeColor || isBold) { out += '</span>'; }
+      return out;
+    }
+
     const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
     const term = document.getElementById('terminal');
     const badge = document.getElementById('state-badge');
     const modeBtn = document.getElementById('mode-btn');
+    const autoscrollChk = document.getElementById('autoscroll-chk');
+    const logCountSpan = document.getElementById('log-count');
     let pendingApproval = null;
-    ws.onopen = () => { badge.textContent = 'IDLE (CONNECTED)'; };
-    ws.onclose = () => { badge.textContent = 'DISCONNECTED'; };
+    let activeFilter = 'ALL';
+    const logBuffer = [];
+
+    ws.onopen = () => {
+      badge.textContent = 'IDLE (CONNECTED)';
+      badge.className = 'badge green';
+      appendLog('system', '\\x1b[32m✔ Connected to MeGa X Relay Server\\x1b[0m\\n');
+    };
+    ws.onclose = () => {
+      badge.textContent = 'DISCONNECTED';
+      badge.className = 'badge red';
+      appendLog('system', '\\x1b[31m✖ Disconnected from MeGa X Relay Server\\x1b[0m\\n');
+    };
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
       if (msg.type === 'TERMINAL_STREAM') {
-        term.textContent += msg.payload.data;
-        term.scrollTop = term.scrollHeight;
+        appendLog(msg.payload.stream || 'stdout', msg.payload.data);
       } else if (msg.type === 'STATE_CHANGE') {
-        badge.textContent = msg.payload.state;
-        term.textContent += '[STATE -> ' + msg.payload.state + '] ' + msg.payload.message + '\\n';
+        updateStateBadge(msg.payload.state);
+        appendLog('system', '\\x1b[34m[STATE -> ' + msg.payload.state + ']\\x1b[0m ' + msg.payload.message + '\\n');
       } else if (msg.type === 'APPROVAL_REQUIRED') {
         pendingApproval = msg.payload;
         document.getElementById('approval-text').textContent = '⚠️ ' + msg.payload.trigger + ': ' + msg.payload.summary;
         document.getElementById('approval-card').style.display = 'block';
+        appendLog('system', '\\x1b[33m⚠️ APPROVAL REQUIRED: ' + msg.payload.trigger + '\\x1b[0m\\n');
       } else if (msg.type === 'CONFIG_UPDATED') {
         modeBtn.textContent = msg.payload.engineMode;
       }
     };
+
+    function appendLog(stream, data) {
+      logBuffer.push({ stream, html: renderAnsiString(data) });
+      logCountSpan.textContent = logBuffer.length + ' chunks';
+      if (activeFilter === 'ALL' || activeFilter === stream) {
+        term.innerHTML += renderAnsiString(data);
+        if (autoscrollChk.checked) {
+          term.scrollTop = term.scrollHeight;
+        }
+      }
+    }
+
+    function setFilter(filter) {
+      activeFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === filter);
+      });
+      term.innerHTML = '';
+      for (const item of logBuffer) {
+        if (filter === 'ALL' || item.stream === filter) {
+          term.innerHTML += item.html;
+        }
+      }
+      if (autoscrollChk.checked) {
+        term.scrollTop = term.scrollHeight;
+      }
+    }
+
+    function clearTerminal() {
+      logBuffer.length = 0;
+      term.innerHTML = '';
+      logCountSpan.textContent = '0 chunks';
+    }
+
+    function updateStateBadge(state) {
+      badge.textContent = state;
+      if (state === 'IDLE' || state === 'COMPLETED') badge.className = 'badge green';
+      else if (state === 'FAILED' || state === 'ROLLING_BACK') badge.className = 'badge red';
+      else badge.className = 'badge yellow';
+    }
+
     function toggleMode() {
       const next = modeBtn.textContent === 'SINGLE_AGENT' ? 'MULTI_AGENT' : 'SINGLE_AGENT';
       ws.send(JSON.stringify({ type: 'SET_ENGINE_MODE', engineMode: next }));

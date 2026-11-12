@@ -30,6 +30,7 @@ export * from './relay/mobileRelayServer';
 export * from './relay/fcmDispatcher';
 export * from './relay/streamThrottler';
 export * from './relay/tunnelInspector';
+export * from './relay/ansiHelper';
 export * from './container/dockerConfigValidator';
 export * from './cli';
 
