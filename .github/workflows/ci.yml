@@ -1,4 +1,4 @@
-name: MeGa X Daemon CI
+name: MeGa X Ecosystem CI
 
 on:
   push:
@@ -7,8 +7,13 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  daemon-test-matrix:
+    name: Daemon Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22']
     defaults:
       run:
         working-directory: ./daemon
@@ -17,14 +22,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 22
+      - name: Configure Git Identity for Tests
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: ./daemon/package-lock.json
 
-      - name: Install dependencies
+      - name: Install Daemon Dependencies
         run: npm ci
 
       - name: Typecheck TypeScript
@@ -33,6 +43,37 @@ jobs:
       - name: Build Daemon
         run: npm run build
 
-      - name: Run Automated Test Suite (Phases 1-10)
+      - name: Run Full Test Battery (All Suites)
         run: npm test
 
+      - name: Validate Ecosystem Health CLI
+        run: npx megax health
+
+      - name: Validate Docker Configuration
+        run: npx megax docker
+
+  mobile-ci:
+    name: Mobile Flutter Analysis & Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mobile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Verify Flutter Static Analysis
+        run: flutter analyze
+
+      - name: Run Mobile Flutter Test Suite
+        run: flutter test

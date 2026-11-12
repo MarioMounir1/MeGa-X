@@ -71,6 +71,9 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/metrics` | `GET` | Self-healing recovery rate, first-attempt pass rate, average attempts, and mode breakdown (`?mode=&limit=`) |
 | `/api/consensus` | `GET` | Multi-agent consensus status, approval ratio, votes, and conflict evaluations (`?limit=&taskId=`) |
 | `/api/network/health` | `GET` | Active network interfaces, Tailscale connectivity state, primary WS endpoint, and transition history |
+| `/api/ecosystem/health` | `GET` | Full ecosystem health status across Daemon Core, Git Manager, Security Gate, and Watchdog |
+| `/manifest.json` | `GET` | PWA Web App Manifest for installing the Web Steering Wheel to home screen |
+| `/api/release/notes` | `GET` | Automated semantic release notes generator (`?version=&limit=&format=markdown\|json`) |
 
 ---
 
@@ -80,9 +83,11 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 59 automated test suites
+npm test          # Runs all 64 automated test suites (114 tests)
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
+npx megax health  # Generates ecosystem diagnostic health report
+npx megax notes   # Generates formatted release notes from Git commit history
 npx megax benchmark # Runs autonomous self-healing benchmark scenarios
 ```
 

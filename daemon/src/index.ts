@@ -20,6 +20,7 @@ export * from './security/securityGate';
 export * from './storage/taskAuditStore';
 export * from './storage/metricsCollector';
 export * from './git/gitManager';
+export * from './git/releaseNotes';
 export * from './verifier/verificationRunner';
 export * from './agents/agentRegistry';
 export * from './agents/liveProviders';

@@ -6,7 +6,8 @@ import { loadMegaXConfig } from './config/configLoader';
 import { getEnvDiagnostics } from './config/envConfig';
 import { validateDockerEnvironment } from './container/dockerConfigValidator';
 import { BenchmarkRunner } from './benchmark/benchmarkRunner';
-import { bootstrapDaemon, startDaemonRelayServer } from './index';
+import { ReleaseNotesGenerator } from './git/releaseNotes';
+import { bootstrapDaemon, getEcosystemHealthReport, startDaemonRelayServer } from './index';
 import { TunnelInspector } from './relay/tunnelInspector';
 import { EngineMode, MegaXConfig } from './types/contracts';
 
@@ -70,6 +71,8 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax doctor [--config <path>]    Run system readiness & environment check',
       '  megax docker [--root <path>]      Validate Docker container readiness',
       '  megax benchmark [--scenario <id>] Run autonomous self-healing benchmarks',
+      '  megax health [--config <path>]    Display full ecosystem subsystem health',
+      '  megax notes [--version <v>]       Generate release notes from Git history',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -143,6 +146,61 @@ export async function runMegaXCli(args: string[]): Promise<{
     return {
       exitCode: report.valid ? 0 : 1,
       output,
+    };
+  }
+
+  if (command === 'health') {
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const health = getEcosystemHealthReport(engine);
+
+    const lines = [
+      '=== MeGa X Ecosystem Health Report ===',
+      `Version        : ${health.version}`,
+      `Status         : ${health.status}`,
+      `Timestamp      : ${health.timestamp}`,
+      'Subsystems:',
+      `  Daemon Core       : ${health.subsystems.daemonCore ? 'HEALTHY' : 'DEGRADED'}`,
+      `  Git Manager       : ${health.subsystems.gitManager ? 'HEALTHY' : 'DEGRADED'}`,
+      `  Security Gate     : ${health.subsystems.securityGate ? 'HEALTHY' : 'DEGRADED'}`,
+      `  Network Watchdog  : ${health.subsystems.networkWatchdog ? 'HEALTHY' : 'DEGRADED'}`,
+      `  Consensus Engine  : ${health.subsystems.consensusEngine ? 'HEALTHY' : 'DEGRADED'}`,
+      `  Benchmark Profiler: ${health.subsystems.benchmarkProfiler ? 'HEALTHY' : 'DEGRADED'}`,
+      'Metrics:',
+      `  Total Test Suites : ${health.metrics.totalTestSuites}`,
+      `  Registered Agents : ${health.metrics.registeredAgentCount}`,
+    ];
+
+    return {
+      exitCode: health.status === 'HEALTHY' ? 0 : 1,
+      output: lines.join('\n'),
+    };
+  }
+
+  if (command === 'notes') {
+    const vIdx = rest.indexOf('--version');
+    const version = vIdx !== -1 && rest[vIdx + 1] ? rest[vIdx + 1] : 'v1.0.0';
+    const lIdx = rest.indexOf('--limit');
+    const limit = lIdx !== -1 && rest[lIdx + 1] ? Number(rest[lIdx + 1]) : 50;
+
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const generator = new ReleaseNotesGenerator(engine.getGitManager());
+    const notes = generator.generateMarkdown({ version, limit });
+
+    return {
+      exitCode: 0,
+      output: notes,
     };
   }
 
