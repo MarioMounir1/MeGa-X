@@ -5,6 +5,7 @@ import * as path from 'path';
 import { loadMegaXConfig } from './config/configLoader';
 import { getEnvDiagnostics } from './config/envConfig';
 import { validateDockerEnvironment } from './container/dockerConfigValidator';
+import { BenchmarkRunner } from './benchmark/benchmarkRunner';
 import { bootstrapDaemon, startDaemonRelayServer } from './index';
 import { TunnelInspector } from './relay/tunnelInspector';
 import { EngineMode, MegaXConfig } from './types/contracts';
@@ -68,6 +69,7 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax status [--config <path>]    Display project config and audit history',
       '  megax doctor [--config <path>]    Run system readiness & environment check',
       '  megax docker [--root <path>]      Validate Docker container readiness',
+      '  megax benchmark [--scenario <id>] Run autonomous self-healing benchmarks',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -141,6 +143,33 @@ export async function runMegaXCli(args: string[]): Promise<{
     return {
       exitCode: report.valid ? 0 : 1,
       output,
+    };
+  }
+
+  if (command === 'benchmark') {
+    const scIdx = rest.indexOf('--scenario');
+    const scenarioId = scIdx !== -1 && rest[scIdx + 1] ? rest[scIdx + 1] : undefined;
+
+    const runner = new BenchmarkRunner();
+    const report = await runner.runSuite(scenarioId);
+
+    const lines = [
+      '=== MeGa X Autonomous Benchmark Report ===',
+      `Total Scenarios : ${report.totalScenarios}`,
+      `Passed Scenarios: ${report.passedScenarios}/${report.totalScenarios} (${report.passRatePercent}%)`,
+      `Stability Score : ${report.stabilityScore}/100`,
+      `Average Latency : ${report.avgDurationMs}ms`,
+      '',
+      'Scenario Breakdown:',
+      ...report.results.map(
+        (r) =>
+          `  - [${r.passed ? 'PASS' : 'FAIL'}] ${r.name} (${r.scenarioId}): outcome=${r.actualOutcome}, attempts=${r.attemptsUsed}, latency=${r.durationMs}ms`
+      ),
+    ];
+
+    return {
+      exitCode: report.passRatePercent === 100 ? 0 : 1,
+      output: lines.join('\n'),
     };
   }
 

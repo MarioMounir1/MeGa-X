@@ -22,6 +22,7 @@ import {
 } from '../types/contracts';
 import { TerminalStreamThrottler } from './streamThrottler';
 import { TunnelInspector } from './tunnelInspector';
+import { BenchmarkRunner } from '../benchmark/benchmarkRunner';
 
 export interface FcmNotificationPayload {
   title: string;
@@ -888,6 +889,33 @@ export class MobileRelayServer {
           evaluations,
         })
       );
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/benchmark/scenarios') {
+      const runner = new BenchmarkRunner();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(runner.getScenarios()));
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/benchmark/run') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', async () => {
+        try {
+          const parsed = body.trim() ? (JSON.parse(body) as { scenarioId?: string }) : {};
+          const runner = new BenchmarkRunner();
+          const report = await runner.runSuite(parsed.scenarioId);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(report));
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        }
+      });
       return;
     }
 
