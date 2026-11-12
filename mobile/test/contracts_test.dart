@@ -131,6 +131,31 @@ void main() {
       expect(summary.engineMode, 'MULTI_AGENT');
       expect(summary.dashboardUrl, 'http://localhost:4040/');
     });
+
+    test('Parses ConsensusEvaluationModel & AgentVoteModel', () {
+      final consensus = ConsensusEvaluationModel.fromJson({
+        'taskId': 'task_eval_1',
+        'status': 'MAJORITY_APPROVAL',
+        'approvalRatio': 0.67,
+        'votes': [
+          {'agentId': 'claude', 'role': 'PLANNER', 'approved': true},
+          {'agentId': 'antigravity', 'role': 'EXECUTOR', 'approved': true},
+          {'agentId': 'codex', 'role': 'REVIEWER', 'approved': false, 'feedback': 'Refactor requested'},
+        ],
+        'conflictingFiles': ['src/app.ts'],
+        'requiresMobileEscalation': false,
+        'resolutionStrategyApplied': 'SYNTHESIS',
+        'evaluatedAt': '2026-11-12T22:00:00Z',
+      });
+
+      expect(consensus.taskId, 'task_eval_1');
+      expect(consensus.status, 'MAJORITY_APPROVAL');
+      expect(consensus.approvalRatio, 0.67);
+      expect(consensus.votes.length, 3);
+      expect(consensus.votes[2].feedback, 'Refactor requested');
+      expect(consensus.conflictingFiles, ['src/app.ts']);
+      expect(consensus.resolutionStrategyApplied, 'SYNTHESIS');
+    });
   });
 }
 

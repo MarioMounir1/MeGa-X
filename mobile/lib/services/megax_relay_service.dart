@@ -701,6 +701,28 @@ class MegaXRelayService {
     }
   }
 
+  Future<List<ConsensusEvaluationModel>> fetchConsensusEvaluations({
+    int limit = 50,
+    String? taskId,
+  }) async {
+    final client = HttpClient();
+    try {
+      final q = taskId != null ? '&taskId=$taskId' : '';
+      final req = await client
+          .getUrl(Uri.parse('$_httpBaseUrl/api/consensus?limit=$limit$q'));
+      final res = await req.close();
+      final raw = await res.transform(utf8.decoder).join();
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final list = (decoded['evaluations'] as List<dynamic>?) ?? [];
+      return list
+          .map((e) =>
+              ConsensusEvaluationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } finally {
+      client.close();
+    }
+  }
+
   Future<MobilePairingManifest> fetchPairingManifest() async {
     final client = HttpClient();
     try {

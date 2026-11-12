@@ -15,6 +15,7 @@ import {
   TerminalStreamListener,
   VerificationRunner,
 } from '../verifier/verificationRunner';
+import { AgentConsensusEngine, AgentVote, ConsensusEvaluation } from './consensusEngine';
 
 export interface TaskStateChangeEvent {
   taskId: string;
@@ -63,6 +64,7 @@ export class OrchestratorEngine {
   private readonly auditStore: TaskAuditStore;
   private readonly securityGate: SecurityGate;
   private readonly verificationRunner: VerificationRunner;
+  private readonly consensusEngine = new AgentConsensusEngine();
   private stateListener?: StateChangeListener;
   private lastStateEvent: TaskStateChangeEvent | null = null;
   private abortRequested = false;
@@ -101,6 +103,10 @@ export class OrchestratorEngine {
 
   public getGitManager(): GitManager {
     return this.gitManager;
+  }
+
+  public getConsensusEngine(): AgentConsensusEngine {
+    return this.consensusEngine;
   }
 
   public getConfig(): MegaXConfig {
@@ -411,9 +417,18 @@ export class OrchestratorEngine {
           payload,
           agentResponse.fileDiffs
         );
+
+        const votes: AgentVote[] = [
+          { agentId: this.config.multiAgentConfig.planner, role: 'PLANNER', approved: true },
+          { agentId: executor.agentId, role: 'EXECUTOR', approved: true },
+          { agentId: reviewer.agentId, role: 'REVIEWER', approved: reviewResult.approved, feedback: reviewResult.feedback },
+        ];
+        const consensus = this.consensusEngine.evaluateVotes(taskId, agentResponse.fileDiffs, votes);
+
         if (!reviewResult.approved) {
           lastErrorLog = [
             `=== MULTI-AGENT REVIEWER REJECTION (Attempt ${attempt}/${maxAttempts}) ===`,
+            `Consensus Status: ${consensus.status} (${Math.round(consensus.approvalRatio * 100)}% Approval)`,
             `Reviewer (${reviewer.agentId}) Feedback:`,
             reviewResult.feedback ?? 'Changes did not pass code review.',
           ].join('\n');

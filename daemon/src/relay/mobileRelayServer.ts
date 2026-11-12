@@ -871,6 +871,26 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/consensus') {
+      const parsedUrl = new URL(req.url ?? '/api/consensus', 'http://localhost');
+      const rawLimit = parsedUrl.searchParams.get('limit');
+      const limit = rawLimit ? Math.max(1, parseInt(rawLimit, 10)) : 50;
+      const taskId = parsedUrl.searchParams.get('taskId') ?? undefined;
+
+      const evaluations = taskId
+        ? [this.engine.getConsensusEngine().getEvaluationForTask(taskId)].filter(Boolean)
+        : this.engine.getConsensusEngine().getRecentEvaluations(limit);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          count: evaluations.length,
+          evaluations,
+        })
+      );
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/security') {
       const summary = this.engine.getSecurityGate().getSecuritySummary();
       res.writeHead(200, { 'Content-Type': 'application/json' });

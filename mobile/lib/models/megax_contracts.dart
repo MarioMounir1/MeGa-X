@@ -512,3 +512,71 @@ class DaemonInstanceSummary {
   }
 }
 
+class AgentVoteModel {
+  final String agentId;
+  final String role;
+  final bool approved;
+  final String? feedback;
+
+  const AgentVoteModel({
+    required this.agentId,
+    required this.role,
+    required this.approved,
+    this.feedback,
+  });
+
+  factory AgentVoteModel.fromJson(Map<String, dynamic> json) {
+    return AgentVoteModel(
+      agentId: json['agentId'] as String? ?? '',
+      role: json['role'] as String? ?? 'REVIEWER',
+      approved: json['approved'] as bool? ?? false,
+      feedback: json['feedback'] as String?,
+    );
+  }
+}
+
+class ConsensusEvaluationModel {
+  final String taskId;
+  final String status;
+  final double approvalRatio;
+  final List<AgentVoteModel> votes;
+  final List<String> conflictingFiles;
+  final bool requiresMobileEscalation;
+  final String resolutionStrategyApplied;
+  final String evaluatedAt;
+
+  const ConsensusEvaluationModel({
+    required this.taskId,
+    required this.status,
+    required this.approvalRatio,
+    required this.votes,
+    required this.conflictingFiles,
+    required this.requiresMobileEscalation,
+    required this.resolutionStrategyApplied,
+    required this.evaluatedAt,
+  });
+
+  factory ConsensusEvaluationModel.fromJson(Map<String, dynamic> json) {
+    final rawVotes = (json['votes'] as List<dynamic>?)
+            ?.map((e) => AgentVoteModel.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [];
+    final rawConflicts = (json['conflictingFiles'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [];
+    return ConsensusEvaluationModel(
+      taskId: json['taskId'] as String? ?? '',
+      status: json['status'] as String? ?? 'UNANIMOUS_APPROVAL',
+      approvalRatio: (json['approvalRatio'] as num?)?.toDouble() ?? 1.0,
+      votes: rawVotes,
+      conflictingFiles: rawConflicts,
+      requiresMobileEscalation:
+          json['requiresMobileEscalation'] as bool? ?? false,
+      resolutionStrategyApplied:
+          json['resolutionStrategyApplied'] as String? ?? 'DIRECT_PASS',
+      evaluatedAt: json['evaluatedAt'] as String? ?? '',
+    );
+  }
+}
+
