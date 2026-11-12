@@ -642,6 +642,47 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'POST' && cleanPath === '/api/branches/squash') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as {
+            taskBranch?: string;
+            baseBranch?: string;
+            commitMessage?: string;
+          };
+          const result = this.engine
+            .getGitManager()
+            .squashTaskBranchCommits(
+              parsed.taskBranch ?? '',
+              parsed.baseBranch ?? 'main',
+              parsed.commitMessage
+            );
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              squashed: true,
+              ...result,
+            })
+          );
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error:
+                err instanceof Error
+                  ? err.message
+                  : 'Failed to squash branch commits',
+            })
+          );
+        }
+      });
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/commits') {
       const git = this.engine.getGitManager();
       res.writeHead(200, { 'Content-Type': 'application/json' });

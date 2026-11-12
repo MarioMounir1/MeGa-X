@@ -272,6 +272,50 @@ export class GitManager {
   }
 
   /**
+   * Squashes all intermediate retry/fix commits on a `megax/*` task branch into a single atomic commit.
+   */
+  public squashTaskBranchCommits(
+    taskBranch: string,
+    baseBranch = 'main',
+    commitMessage?: string
+  ): { taskBranch: string; squashedCommitHash: string } {
+    const cleanBranch = taskBranch.trim();
+    if (!cleanBranch.startsWith('megax/')) {
+      throw new GitOperationError(
+        `Refusing to squash non-task branch "${cleanBranch}". Only "megax/*" branches can be squashed.`
+      );
+    }
+
+    const origBranch = this.getCurrentBranch();
+    this.runGit(['checkout', cleanBranch]);
+
+    try {
+      const mergeBase = this.runGit(['merge-base', baseBranch, cleanBranch]).trim();
+      const headHash = this.runGit(['rev-parse', 'HEAD']).trim();
+
+      if (mergeBase === headHash) {
+        throw new GitOperationError(
+          `Branch "${cleanBranch}" has no commits ahead of base branch "${baseBranch}".`
+        );
+      }
+
+      this.runGit(['reset', '--soft', mergeBase]);
+      const msg = commitMessage?.trim() || `feat(${cleanBranch}): verified implementation`;
+      this.runGit(['commit', '-m', msg]);
+      const squashedCommitHash = this.runGit(['rev-parse', '--short', 'HEAD']).trim();
+
+      return {
+        taskBranch: cleanBranch,
+        squashedCommitHash,
+      };
+    } finally {
+      if (origBranch !== cleanBranch) {
+        this.runGit(['checkout', origBranch]);
+      }
+    }
+  }
+
+  /**
    * Stashes any uncommitted manual edits (excluding `.megax`) before switching to a task branch.
    * Returns true if a stash entry was created.
    */

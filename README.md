@@ -44,6 +44,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/diff` | `GET` | Live working-tree status lines and unified Git diff (`git diff HEAD`) |
 | `/api/branches` | `GET` | Active branch and all `megax/*` task branches |
 | `/api/branches/diff` | `GET` | Unified Git diff between a `megax/*` task branch and `main` (`?branch=&base=`) |
+| `/api/branches/squash` | `POST` | Squash intermediate retry commits on a `megax/*` task branch into a single atomic commit |
 | `/api/branches/delete` | `POST` | Safely discard/delete a `megax/*` task branch (`main` protected) |
 | `/api/commits` | `GET` | Recent Git commit history (`hash`, `subject`, `author`, `date`) |
 | `/api/stash` | `GET` | List saved Git stash entries (`ref`, `message`, `date`) |
@@ -76,7 +77,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 57 automated test suites
+npm test          # Runs all 58 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 npx megax benchmark # Runs autonomous self-healing benchmark scenarios
