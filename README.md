@@ -47,6 +47,9 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/branches/squash` | `POST` | Squash intermediate retry commits on a `megax/*` task branch into a single atomic commit |
 | `/api/branches/delete` | `POST` | Safely discard/delete a `megax/*` task branch (`main` protected) |
 | `/api/commits` | `GET` | Recent Git commit history (`hash`, `subject`, `author`, `date`) |
+| `/api/tags` | `GET` | List annotated Git release tags (`tag`, `commitHash`, `message`, `date`) |
+| `/api/tags` | `POST` | Create an annotated semantic Git release tag on HEAD (`{ tag, message }`) |
+| `/api/tags/delete` | `POST` | Delete a Git release tag (`{ tag }`) |
 | `/api/stash` | `GET` | List saved Git stash entries (`ref`, `message`, `date`) |
 | `/api/stash/push` | `POST` | Stash uncommitted WIP edits (`--include-untracked`) from mobile |
 | `/api/stash/pop` | `POST` | Restore the most recent Git stash entry onto the working tree |
@@ -77,7 +80,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 58 automated test suites
+npm test          # Runs all 59 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 npx megax benchmark # Runs autonomous self-healing benchmark scenarios

@@ -402,5 +402,69 @@ export class GitManager {
         return { hash, subject, author, date };
       });
   }
+
+  /**
+   * Creates an annotated Git release tag on HEAD.
+   */
+  public createReleaseTag(
+    tag: string,
+    message?: string
+  ): { tag: string; commitHash: string; date: string } {
+    const cleanTag = tag.trim();
+    if (!cleanTag) {
+      throw new GitOperationError('Tag name cannot be empty.');
+    }
+    const tagMsg = message?.trim() || `Release ${cleanTag}`;
+    this.runGit(['tag', '-a', cleanTag, '-m', tagMsg]);
+    const commitHash = this.runGit(['rev-parse', '--short', 'HEAD']).trim();
+    return {
+      tag: cleanTag,
+      commitHash,
+      date: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Lists all Git tags in the repository with commit and message info.
+   */
+  public listReleaseTags(): {
+    tag: string;
+    commitHash: string;
+    message: string;
+    date: string;
+  }[] {
+    if (!this.isGitRepository()) {
+      return [];
+    }
+    const raw = this.runGit([
+      'tag',
+      '-l',
+      '--sort=-creatordate',
+      '--format=%(refname:short)|%(objectname:short)|%(contents:subject)|%(creatordate:iso)',
+    ]);
+    if (!raw) {
+      return [];
+    }
+    return raw
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [tag = '', commitHash = '', message = '', date = ''] = line.split('|');
+        return { tag, commitHash, message, date };
+      });
+  }
+
+  /**
+   * Deletes a Git release tag.
+   */
+  public deleteReleaseTag(tag: string): { tag: string; deleted: boolean } {
+    const cleanTag = tag.trim();
+    if (!cleanTag) {
+      throw new GitOperationError('Tag name cannot be empty.');
+    }
+    this.runGit(['tag', '-d', cleanTag]);
+    return { tag: cleanTag, deleted: true };
+  }
 }
 

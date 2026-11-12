@@ -694,6 +694,69 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/tags') {
+      const git = this.engine.getGitManager();
+      const tags = git.listReleaseTags();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          tags,
+          totalCount: tags.length,
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/tags') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { tag?: string; message?: string };
+          const result = this.engine
+            .getGitManager()
+            .createReleaseTag(parsed.tag ?? '', parsed.message);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: err instanceof Error ? err.message : 'Tag creation failed',
+            })
+          );
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/tags/delete') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { tag?: string };
+          const result = this.engine
+            .getGitManager()
+            .deleteReleaseTag(parsed.tag ?? '');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: err instanceof Error ? err.message : 'Tag deletion failed',
+            })
+          );
+        }
+      });
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/stash') {
       const git = this.engine.getGitManager();
       const stashes = git.listStashes();
