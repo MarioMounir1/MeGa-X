@@ -23,6 +23,11 @@ import {
 import { TerminalStreamThrottler } from './streamThrottler';
 import { TunnelInspector } from './tunnelInspector';
 import { BenchmarkRunner } from '../benchmark/benchmarkRunner';
+import {
+  NetworkHealthMonitor,
+  NetworkHealthSnapshot,
+  NetworkTransitionEvent,
+} from './networkWatchdog';
 
 export interface FcmNotificationPayload {
   title: string;
@@ -45,7 +50,8 @@ export type RelayOutboundMessage =
   | { type: 'STATE_CHANGE'; payload: TaskStateChangeEvent }
   | { type: 'APPROVAL_REQUIRED'; payload: ApprovalRequestPayload }
   | { type: 'ORCHESTRATION_RESULT'; payload: OrchestrationRunResult }
-  | { type: 'CONFIG_UPDATED'; payload: MegaXConfig };
+  | { type: 'CONFIG_UPDATED'; payload: MegaXConfig }
+  | { type: 'NETWORK_TRANSITION'; payload: NetworkTransitionEvent };
 
 export type RelayInboundMessage =
   | {
@@ -87,6 +93,7 @@ export class MobileRelayServer {
   >();
   private readonly streamThrottler: TerminalStreamThrottler;
   private readonly taskQueue: TaskQueueManager;
+  private readonly networkMonitor: NetworkHealthMonitor;
   private readonly fcmHistory: Array<
     FcmNotificationPayload & { dispatchedAt: string }
   > = [];
@@ -99,6 +106,11 @@ export class MobileRelayServer {
     this.engine = engine;
     this.fcmSender = fcmSender;
     this.relaySecretToken = relaySecretToken;
+    this.networkMonitor = new NetworkHealthMonitor(4040, {
+      listener: (evt) => {
+        this.broadcast({ type: 'NETWORK_TRANSITION', payload: evt });
+      },
+    });
     this.streamThrottler = new TerminalStreamThrottler((evt) => {
       this.broadcast({ type: 'TERMINAL_STREAM', payload: evt });
     });
@@ -191,6 +203,10 @@ export class MobileRelayServer {
     this.pendingApprovals.delete(decision.approvalId);
     entry.resolve(decision);
     return true;
+  }
+
+  public getNetworkMonitor(): NetworkHealthMonitor {
+    return this.networkMonitor;
   }
 
   /**
@@ -916,6 +932,12 @@ export class MobileRelayServer {
           res.end(JSON.stringify({ error: String(err) }));
         }
       });
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/network/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(this.networkMonitor.getSnapshot()));
       return;
     }
 

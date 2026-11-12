@@ -66,6 +66,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/history/clear` | `POST` | Clear persisted `.megax/audit-history.json` entries |
 | `/api/metrics` | `GET` | Self-healing recovery rate, first-attempt pass rate, average attempts, and mode breakdown (`?mode=&limit=`) |
 | `/api/consensus` | `GET` | Multi-agent consensus status, approval ratio, votes, and conflict evaluations (`?limit=&taskId=`) |
+| `/api/network/health` | `GET` | Active network interfaces, Tailscale connectivity state, primary WS endpoint, and transition history |
 
 ---
 
@@ -75,7 +76,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 56 automated test suites
+npm test          # Runs all 57 automated test suites
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 npx megax benchmark # Runs autonomous self-healing benchmark scenarios
