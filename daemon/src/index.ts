@@ -25,6 +25,7 @@ export * from './verifier/verificationRunner';
 export * from './agents/agentRegistry';
 export * from './agents/liveProviders';
 export * from './agents/mockReplayEngine';
+export * from './agents/tokenBudgetManager';
 export * from './orchestrator/orchestratorEngine';
 export * from './orchestrator/consensusEngine';
 export * from './orchestrator/taskQueue';

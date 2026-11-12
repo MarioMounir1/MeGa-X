@@ -16,6 +16,7 @@ import {
   VerificationRunner,
 } from '../verifier/verificationRunner';
 import { AgentConsensusEngine, AgentVote, ConsensusEvaluation } from './consensusEngine';
+import { TokenBudgetManager } from '../agents/tokenBudgetManager';
 
 export interface TaskStateChangeEvent {
   taskId: string;
@@ -65,6 +66,7 @@ export class OrchestratorEngine {
   private readonly securityGate: SecurityGate;
   private readonly verificationRunner: VerificationRunner;
   private readonly consensusEngine = new AgentConsensusEngine();
+  private readonly budgetManager = new TokenBudgetManager();
   private stateListener?: StateChangeListener;
   private lastStateEvent: TaskStateChangeEvent | null = null;
   private abortRequested = false;
@@ -107,6 +109,10 @@ export class OrchestratorEngine {
 
   public getConsensusEngine(): AgentConsensusEngine {
     return this.consensusEngine;
+  }
+
+  public getBudgetManager(): TokenBudgetManager {
+    return this.budgetManager;
   }
 
   public getConfig(): MegaXConfig {

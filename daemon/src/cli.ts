@@ -73,6 +73,7 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax benchmark [--scenario <id>] Run autonomous self-healing benchmarks',
       '  megax health [--config <path>]    Display full ecosystem subsystem health',
       '  megax notes [--version <v>]       Generate release notes from Git history',
+      '  megax budget [--config <path>]    Display AI token usage and cost budget',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -201,6 +202,33 @@ export async function runMegaXCli(args: string[]): Promise<{
     return {
       exitCode: 0,
       output: notes,
+    };
+  }
+
+  if (command === 'budget') {
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const summary = engine.getBudgetManager().getSummary();
+
+    const lines = [
+      '=== MeGa X Token & Cost Budget Summary ===',
+      `Total Tokens      : ${summary.totalTokens} (Prompt: ${summary.totalPromptTokens}, Completion: ${summary.totalCompletionTokens})`,
+      `Estimated Cost    : $${summary.totalEstimatedCostUsd.toFixed(4)}`,
+      `Logged Records    : ${summary.recordsCount}`,
+      `Budget Exceeded   : ${summary.isBudgetExceeded ? 'YES' : 'NO'}`,
+    ];
+    if (summary.exceededReason) {
+      lines.push(`Reason            : ${summary.exceededReason}`);
+    }
+
+    return {
+      exitCode: summary.isBudgetExceeded ? 1 : 0,
+      output: lines.join('\n'),
     };
   }
 

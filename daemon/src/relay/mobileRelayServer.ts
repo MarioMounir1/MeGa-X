@@ -1119,6 +1119,44 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/budget') {
+      const budgetManager = this.engine.getBudgetManager();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          summary: budgetManager.getSummary(),
+          records: budgetManager.getRecords(),
+        })
+      );
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/budget/limits') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body);
+          this.engine.getBudgetManager().setLimits(parsed);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(this.engine.getBudgetManager().getSummary()));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/budget/reset') {
+      this.engine.getBudgetManager().reset();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, summary: this.engine.getBudgetManager().getSummary() }));
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/security') {
       const summary = this.engine.getSecurityGate().getSecuritySummary();
       res.writeHead(200, { 'Content-Type': 'application/json' });
