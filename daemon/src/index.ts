@@ -18,6 +18,7 @@ export * from './patcher/filePatcher';
 export * from './patcher/workspaceScanner';
 export * from './security/securityGate';
 export * from './storage/taskAuditStore';
+export * from './storage/workspaceStateStore';
 export * from './storage/metricsCollector';
 export * from './git/gitManager';
 export * from './git/releaseNotes';

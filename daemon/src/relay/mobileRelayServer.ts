@@ -1157,6 +1157,85 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/state') {
+      const parsedUrl = new URL(req.url ?? '/api/state', 'http://localhost');
+      const key = parsedUrl.searchParams.get('key');
+      const store = this.engine.getStateStore();
+
+      if (key) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            key,
+            value: store.get(key),
+            exists: store.has(key),
+          })
+        );
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            state: store.getAll(),
+          })
+        );
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/state') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as {
+            key?: string;
+            value?: unknown;
+            entries?: Record<string, unknown>;
+          };
+          const store = this.engine.getStateStore();
+          if (parsed.entries && typeof parsed.entries === 'object') {
+            store.setMultiple(parsed.entries);
+          } else if (parsed.key !== undefined) {
+            store.set(parsed.key, parsed.value);
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, state: store.getAll() }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/state/delete') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { key?: string };
+          const store = this.engine.getStateStore();
+          const deleted = parsed.key ? store.delete(parsed.key) : false;
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              success: deleted,
+              deletedKey: parsed.key,
+              state: store.getAll(),
+            })
+          );
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/security') {
       const summary = this.engine.getSecurityGate().getSecuritySummary();
       res.writeHead(200, { 'Content-Type': 'application/json' });

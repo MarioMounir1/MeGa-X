@@ -77,6 +77,9 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/budget` | `GET` | AI prompt token usage, latency logs, and estimated cost budget summary |
 | `/api/budget/limits` | `POST` | Configure budget guardrails (`maxTotalTokens`, `maxCostUsd`) |
 | `/api/budget/reset` | `POST` | Reset recorded token usage and cost audit counters |
+| `/api/state` | `GET` | Retrieve persistent workspace state entries or specific key (`?key=`) |
+| `/api/state` | `POST` | Atomically persist workspace key-value pairs (`{ key, value }` or `{ entries }`) |
+| `/api/state/delete` | `POST` | Remove a persistent workspace state key (`{ key }`) |
 
 ---
 
@@ -86,12 +89,13 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 65 automated test suites (117 tests)
+npm test          # Runs all 66 automated test suites (120 tests)
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 npx megax health  # Generates ecosystem diagnostic health report
 npx megax notes   # Generates formatted release notes from Git commit history
 npx megax budget  # Inspects AI token consumption and cost budget
+npx megax state   # Manages persistent workspace state entries
 npx megax benchmark # Runs autonomous self-healing benchmark scenarios
 ```
 

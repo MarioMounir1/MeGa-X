@@ -4,6 +4,7 @@ import { FilePatcher } from '../patcher/filePatcher';
 import { WorkspaceScanner } from '../patcher/workspaceScanner';
 import { ApprovalHandler, SecurityGate } from '../security/securityGate';
 import { TaskAuditStore } from '../storage/taskAuditStore';
+import { WorkspaceStateStore } from '../storage/workspaceStateStore';
 import {
   AgentTaskPayload,
   ContextFile,
@@ -63,6 +64,7 @@ export class OrchestratorEngine {
   private readonly filePatcher: FilePatcher;
   private readonly workspaceScanner: WorkspaceScanner;
   private readonly auditStore: TaskAuditStore;
+  private readonly stateStore: WorkspaceStateStore;
   private readonly securityGate: SecurityGate;
   private readonly verificationRunner: VerificationRunner;
   private readonly consensusEngine = new AgentConsensusEngine();
@@ -79,6 +81,7 @@ export class OrchestratorEngine {
     this.filePatcher = new FilePatcher(this.workspaceRoot);
     this.workspaceScanner = new WorkspaceScanner(this.workspaceRoot);
     this.auditStore = new TaskAuditStore(this.workspaceRoot);
+    this.stateStore = new WorkspaceStateStore(this.workspaceRoot);
     this.securityGate = new SecurityGate(
       this.config.security,
       options.onApprovalRequest
@@ -93,6 +96,10 @@ export class OrchestratorEngine {
 
   public getAuditStore(): TaskAuditStore {
     return this.auditStore;
+  }
+
+  public getStateStore(): WorkspaceStateStore {
+    return this.stateStore;
   }
 
   public getWorkspaceScanner(): WorkspaceScanner {

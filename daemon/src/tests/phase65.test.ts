@@ -125,3 +125,4 @@ describe('Phase 65: Token & Cost Budget Manager, REST Endpoints, and CLI Inspect
     assert.ok(output.includes('Budget Exceeded   : NO'));
   });
 });
+

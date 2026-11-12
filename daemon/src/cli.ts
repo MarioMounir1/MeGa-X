@@ -74,6 +74,7 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax health [--config <path>]    Display full ecosystem subsystem health',
       '  megax notes [--version <v>]       Generate release notes from Git history',
       '  megax budget [--config <path>]    Display AI token usage and cost budget',
+      '  megax state [get|set|list|clear]  Manage persistent workspace state entries',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -230,6 +231,63 @@ export async function runMegaXCli(args: string[]): Promise<{
       exitCode: summary.isBudgetExceeded ? 1 : 0,
       output: lines.join('\n'),
     };
+  }
+
+  if (command === 'state') {
+    const sub = rest[0] || 'list';
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const store = engine.getStateStore();
+
+    if (sub === 'get') {
+      const key = rest[1];
+      if (!key) {
+        return { exitCode: 1, output: 'Error: Key required. Usage: megax state get <key>' };
+      }
+      const val = store.get(key);
+      return {
+        exitCode: val !== undefined ? 0 : 1,
+        output: val !== undefined ? JSON.stringify(val, null, 2) : `Key "${key}" not found.`,
+      };
+    }
+
+    if (sub === 'set') {
+      const key = rest[1];
+      const rawVal = rest[2];
+      if (!key || rawVal === undefined) {
+        return { exitCode: 1, output: 'Error: Key and value required. Usage: megax state set <key> <val>' };
+      }
+      let val: unknown = rawVal;
+      try {
+        val = JSON.parse(rawVal);
+      } catch {
+        // use string as-is
+      }
+      store.set(key, val);
+      return {
+        exitCode: 0,
+        output: `Set state key "${key}" = ${JSON.stringify(val)}`,
+      };
+    }
+
+    if (sub === 'clear') {
+      store.clear();
+      return { exitCode: 0, output: 'Cleared workspace state.' };
+    }
+
+    // Default: list
+    const all = store.getAll();
+    const count = Object.keys(all).length;
+    const output = [
+      `=== MeGa X Workspace State (${count} entries) ===`,
+      count > 0 ? JSON.stringify(all, null, 2) : '  (empty)',
+    ].join('\n');
+    return { exitCode: 0, output };
   }
 
   if (command === 'benchmark') {
