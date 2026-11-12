@@ -5,6 +5,7 @@ import { WorkspaceScanner } from '../patcher/workspaceScanner';
 import { ApprovalHandler, SecurityGate } from '../security/securityGate';
 import { TaskAuditStore } from '../storage/taskAuditStore';
 import { WorkspaceStateStore } from '../storage/workspaceStateStore';
+import { WorkspaceCheckpointManager } from '../storage/checkpointManager';
 import {
   AgentTaskPayload,
   ContextFile,
@@ -67,6 +68,7 @@ export class OrchestratorEngine {
   private readonly workspaceScanner: WorkspaceScanner;
   private readonly auditStore: TaskAuditStore;
   private readonly stateStore: WorkspaceStateStore;
+  private readonly checkpointManager: WorkspaceCheckpointManager;
   private readonly securityGate: SecurityGate;
   private readonly verificationRunner: VerificationRunner;
   private readonly consensusEngine = new AgentConsensusEngine();
@@ -86,6 +88,10 @@ export class OrchestratorEngine {
     this.workspaceScanner = new WorkspaceScanner(this.workspaceRoot);
     this.auditStore = new TaskAuditStore(this.workspaceRoot);
     this.stateStore = new WorkspaceStateStore(this.workspaceRoot);
+    this.checkpointManager = new WorkspaceCheckpointManager(
+      this.workspaceRoot,
+      () => (this.gitManager.isGitRepository() ? this.gitManager.getCurrentBranch() : 'main')
+    );
     this.securityGate = new SecurityGate(
       this.config.security,
       options.onApprovalRequest
@@ -104,6 +110,10 @@ export class OrchestratorEngine {
 
   public getStateStore(): WorkspaceStateStore {
     return this.stateStore;
+  }
+
+  public getCheckpointManager(): WorkspaceCheckpointManager {
+    return this.checkpointManager;
   }
 
   public getWorkspaceScanner(): WorkspaceScanner {

@@ -132,3 +132,4 @@ describe('Phase 68: Agent Thought Trace & Chain-of-Thought Telemetry Recorder', 
     assert.ok(output.includes('[VERIFICATION] [claude-3-7-sonnet]'));
   });
 });
+

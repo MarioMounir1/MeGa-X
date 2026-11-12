@@ -86,6 +86,10 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/thoughts` | `GET` | Retrieve AI reasoning chain and thought traces for a task (`?taskId=&limit=`) |
 | `/api/thoughts` | `POST` | Record a thought trace step (`{ taskId, agentId, category, content }`) |
 | `/api/thoughts/clear` | `POST` | Clear recorded thought trace entries (`{ taskId }`) |
+| `/api/checkpoints` | `GET` | List all saved workspace file checkpoints |
+| `/api/checkpoints` | `POST` | Create a workspace file snapshot checkpoint (`{ name, files, description }`) |
+| `/api/checkpoints/restore` | `POST` | Revert working tree files to a saved checkpoint (`{ id }`) |
+| `/api/checkpoints/delete` | `POST` | Discard a saved workspace checkpoint (`{ id }`) |
 
 ---
 
@@ -95,7 +99,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 68 automated test suites (126 tests)
+npm test          # Runs all 69 automated test suites (129 tests)
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 npx megax health  # Generates ecosystem diagnostic health report
@@ -104,6 +108,7 @@ npx megax budget  # Inspects AI token consumption and cost budget
 npx megax state   # Manages persistent workspace state entries
 npx megax circuit # Inspects and controls agent circuit breaker sentinel
 npx megax trace <id> # Displays chain-of-thought reasoning steps for a task
+npx megax checkpoint # Manages persistent workspace file snapshots
 npx megax benchmark # Runs autonomous self-healing benchmark scenarios
 ```
 

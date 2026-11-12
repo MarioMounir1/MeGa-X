@@ -77,6 +77,7 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax state [get|set|list|clear]  Manage persistent workspace state entries',
       '  megax circuit [status|trip|reset] Inspect or manage agent circuit breaker',
       '  megax trace <taskId>              Display reasoning chain and thought trace',
+      '  megax checkpoint [list|save|restore|del] Manage workspace file checkpoints',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -354,6 +355,62 @@ export async function runMegaXCli(args: string[]): Promise<{
     ];
     for (const step of trace.steps) {
       lines.push(`  [#${step.stepIndex}] [${step.category}] [${step.agentId}]: ${step.content}`);
+    }
+    return {
+      exitCode: 0,
+      output: lines.join('\n'),
+    };
+  }
+
+  if (command === 'checkpoint') {
+    const sub = rest[0] || 'list';
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const cm = engine.getCheckpointManager();
+
+    if (sub === 'save') {
+      const name = rest[1] || `checkpoint_${Date.now()}`;
+      const chk = cm.createCheckpoint(name);
+      return {
+        exitCode: 0,
+        output: `Created checkpoint "${chk.name}" (${chk.id}) containing ${chk.fileCount} file(s).`,
+      };
+    }
+
+    if (sub === 'restore') {
+      const id = rest[1];
+      if (!id) {
+        return { exitCode: 1, output: 'Error: Checkpoint ID required. Usage: megax checkpoint restore <id>' };
+      }
+      const res = cm.restoreCheckpoint(id);
+      return {
+        exitCode: 0,
+        output: `Restored checkpoint ${res.checkpointId} (${res.restoredFiles.length} file(s)).`,
+      };
+    }
+
+    if (sub === 'del' || sub === 'delete') {
+      const id = rest[1];
+      if (!id) {
+        return { exitCode: 1, output: 'Error: Checkpoint ID required. Usage: megax checkpoint del <id>' };
+      }
+      const deleted = cm.deleteCheckpoint(id);
+      return {
+        exitCode: deleted ? 0 : 1,
+        output: deleted ? `Deleted checkpoint ${id}.` : `Checkpoint ${id} not found.`,
+      };
+    }
+
+    // Default: list
+    const list = cm.listCheckpoints();
+    const lines = [`=== MeGa X Workspace Checkpoints (${list.length}) ===`];
+    for (const c of list) {
+      lines.push(`  - [${c.id}] ${c.name} (${c.fileCount} files) [${c.branch}] @ ${c.timestamp}`);
     }
     return {
       exitCode: 0,

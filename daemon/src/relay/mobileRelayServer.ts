@@ -1336,6 +1336,92 @@ export class MobileRelayServer {
       return;
     }
 
+    if (req.method === 'GET' && cleanPath === '/api/checkpoints') {
+      const list = this.engine.getCheckpointManager().listCheckpoints();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ count: list.length, checkpoints: list }));
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/checkpoints') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as {
+            name?: string;
+            files?: string[];
+            description?: string;
+          };
+          const name = parsed.name || `checkpoint_${Date.now()}`;
+          const chk = this.engine.getCheckpointManager().createCheckpoint(name, {
+            files: parsed.files,
+            description: parsed.description,
+          });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, checkpoint: chk }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/checkpoints/restore') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { id?: string };
+          if (!parsed.id) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Checkpoint ID is required' }));
+            return;
+          }
+          const result = this.engine.getCheckpointManager().restoreCheckpoint(parsed.id);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: err instanceof Error ? err.message : 'Restore failed',
+            })
+          );
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/checkpoints/delete') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { id?: string };
+          if (!parsed.id) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Checkpoint ID is required' }));
+            return;
+          }
+          const deleted = this.engine.getCheckpointManager().deleteCheckpoint(parsed.id);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: deleted, deletedId: parsed.id }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
     if (req.method === 'GET' && cleanPath === '/api/security') {
       const summary = this.engine.getSecurityGate().getSecuritySummary();
       res.writeHead(200, { 'Content-Type': 'application/json' });
