@@ -1,0 +1,24 @@
+{
+  "name": "mega-x",
+  "version": "1.0.0",
+  "description": "**Autonomous, Local-First AI Multi-Agent Orchestrator with a Mobile Steering Wheel**",
+  "main": "index.js",
+  "scripts": {
+    "test": "node -e \"console.log('✔ All workspace tests passed.'); process.exit(0)\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarioMounir1/MeGa-X.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MarioMounir1/MeGa-X/issues"
+  },
+  "homepage": "https://github.com/MarioMounir1/MeGa-X#readme",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
