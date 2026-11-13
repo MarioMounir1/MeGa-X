@@ -1,4 +1,5 @@
 /// PROJECT MeGa X - DART DATA CONTRACTS (MIRRORING TYPESCRIPT DAEMON SCHEMAS)
+library megax_contracts;
 
 class TerminalStreamEvent {
   final String taskId;
