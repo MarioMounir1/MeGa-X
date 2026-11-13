@@ -78,6 +78,7 @@ export async function runMegaXCli(args: string[]): Promise<{
       '  megax circuit [status|trip|reset] Inspect or manage agent circuit breaker',
       '  megax trace <taskId>              Display reasoning chain and thought trace',
       '  megax checkpoint [list|save|restore|del] Manage workspace file checkpoints',
+      '  megax deadlock [--task <id>]      Detect agent deadlocks and oscillating livelocks',
       '  megax verify [--config <path>]    Run compile & test verification suite',
       '  megax diff [--config <path>]      Show uncommitted git diff in workspace',
       '  megax run "<prompt>" [--mode <M>] Run an autonomous self-healing task',
@@ -411,6 +412,54 @@ export async function runMegaXCli(args: string[]): Promise<{
     const lines = [`=== MeGa X Workspace Checkpoints (${list.length}) ===`];
     for (const c of list) {
       lines.push(`  - [${c.id}] ${c.name} (${c.fileCount} files) [${c.branch}] @ ${c.timestamp}`);
+    }
+    return {
+      exitCode: 0,
+      output: lines.join('\n'),
+    };
+  }
+
+  if (command === 'deadlock') {
+    const tIdx = rest.indexOf('--task');
+    const taskId = tIdx !== -1 && rest[tIdx + 1] ? rest[tIdx + 1] : undefined;
+    const cfgIdx = rest.indexOf('--config');
+    const cfgPath =
+      cfgIdx !== -1 && rest[cfgIdx + 1]
+        ? path.resolve(rest[cfgIdx + 1])
+        : path.resolve(__dirname, '..', '..', 'megax.config.json');
+
+    const engine = bootstrapDaemon(cfgPath);
+    const watchdog = engine.getDeadlockWatchdog();
+
+    if (taskId) {
+      const result = watchdog.inspect(taskId);
+      const lines = [
+        `=== MeGa X Deadlock Watchdog: Task ${taskId} ===`,
+        `Healthy      : ${result.healthy ? 'YES' : 'NO'}`,
+        `Duration     : ${result.durationMs}ms`,
+      ];
+      if (result.detectedIssue) {
+        lines.push(`Detected     : ${result.detectedIssue}`);
+        lines.push(`Details      : ${result.details}`);
+        lines.push(`Action       : ${result.actionRecommended}`);
+      }
+      return {
+        exitCode: result.healthy ? 0 : 1,
+        output: lines.join('\n'),
+      };
+    }
+
+    const taskIds = watchdog.getTrackedTaskIds();
+    const lines = [
+      `=== MeGa X Multi-Agent Deadlock Watchdog (${taskIds.length} tracked tasks) ===`,
+    ];
+    if (taskIds.length === 0) {
+      lines.push('  No active tasks under surveillance. Ecosystem healthy.');
+    } else {
+      for (const id of taskIds) {
+        const res = watchdog.inspect(id);
+        lines.push(`  - [${id}] Healthy=${res.healthy ? 'YES' : 'NO'}${res.detectedIssue ? ` Issue=${res.detectedIssue}` : ''}`);
+      }
     }
     return {
       exitCode: 0,

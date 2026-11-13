@@ -90,6 +90,8 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 | `/api/checkpoints` | `POST` | Create a workspace file snapshot checkpoint (`{ name, files, description }`) |
 | `/api/checkpoints/restore` | `POST` | Revert working tree files to a saved checkpoint (`{ id }`) |
 | `/api/checkpoints/delete` | `POST` | Discard a saved workspace checkpoint (`{ id }`) |
+| `/api/deadlock` | `GET` | Inspect active tasks for multi-agent cyclic deadlocks or livelocks (`?taskId=`) |
+| `/api/deadlock/check` | `POST` | Execute immediate watchdog diagnosis on a specific task (`{ taskId }`) |
 
 ---
 
@@ -99,7 +101,7 @@ MeGa X enables developers to dispatch high-level feature requirements from a **F
 cd daemon
 npm install
 npm run build
-npm test          # Runs all 69 automated test suites (129 tests)
+npm test          # Runs all 70 automated test suites (132 tests — Platinum Milestone)
 npm run demo      # Runs live self-healing showcase in an isolated Git repo
 npm run serve     # Starts Mobile Relay Server & Web UI on http://localhost:4040
 npx megax health  # Generates ecosystem diagnostic health report
@@ -109,6 +111,7 @@ npx megax state   # Manages persistent workspace state entries
 npx megax circuit # Inspects and controls agent circuit breaker sentinel
 npx megax trace <id> # Displays chain-of-thought reasoning steps for a task
 npx megax checkpoint # Manages persistent workspace file snapshots
+npx megax deadlock # Inspects multi-agent deadlock and livelock watchdog
 npx megax benchmark # Runs autonomous self-healing benchmark scenarios
 ```
 

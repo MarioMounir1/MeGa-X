@@ -33,6 +33,7 @@ export * from './agents/thoughtTraceRecorder';
 export * from './orchestrator/orchestratorEngine';
 export * from './orchestrator/consensusEngine';
 export * from './orchestrator/taskQueue';
+export * from './orchestrator/deadlockWatchdog';
 export * from './relay/mobileRelayServer';
 export * from './relay/fcmDispatcher';
 export * from './relay/streamThrottler';
@@ -126,6 +127,7 @@ export interface EcosystemHealthReport {
     networkWatchdog: boolean;
     consensusEngine: boolean;
     benchmarkProfiler: boolean;
+    deadlockWatchdog: boolean;
   };
   metrics: {
     totalTestSuites: number;
@@ -152,9 +154,10 @@ export function getEcosystemHealthReport(
       networkWatchdog: true,
       consensusEngine: Boolean(consensus),
       benchmarkProfiler: true,
+      deadlockWatchdog: true,
     },
     metrics: {
-      totalTestSuites: 60,
+      totalTestSuites: 70,
       registeredAgentCount: roster.listRegisteredAgentIds().length,
     },
   };

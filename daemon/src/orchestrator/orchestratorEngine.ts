@@ -18,6 +18,7 @@ import {
   VerificationRunner,
 } from '../verifier/verificationRunner';
 import { AgentConsensusEngine, AgentVote, ConsensusEvaluation } from './consensusEngine';
+import { AgentDeadlockWatchdog } from './deadlockWatchdog';
 import { TokenBudgetManager } from '../agents/tokenBudgetManager';
 import { CircuitBreakerSentinel } from '../agents/circuitBreakerSentinel';
 import { ThoughtTraceRecorder } from '../agents/thoughtTraceRecorder';
@@ -75,6 +76,7 @@ export class OrchestratorEngine {
   private readonly budgetManager = new TokenBudgetManager();
   private readonly circuitBreaker = new CircuitBreakerSentinel();
   private readonly thoughtRecorder = new ThoughtTraceRecorder();
+  private readonly deadlockWatchdog = new AgentDeadlockWatchdog();
   private stateListener?: StateChangeListener;
   private lastStateEvent: TaskStateChangeEvent | null = null;
   private abortRequested = false;
@@ -142,6 +144,10 @@ export class OrchestratorEngine {
 
   public getThoughtTraceRecorder(): ThoughtTraceRecorder {
     return this.thoughtRecorder;
+  }
+
+  public getDeadlockWatchdog(): AgentDeadlockWatchdog {
+    return this.deadlockWatchdog;
   }
 
   public getConfig(): MegaXConfig {

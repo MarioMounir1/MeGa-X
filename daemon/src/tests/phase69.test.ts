@@ -168,3 +168,4 @@ describe('Phase 69: Workspace Snapshot & Checkpoint Restoration Manager', () => 
     assert.ok(delRes.output.includes(`Deleted checkpoint ${chkId}`));
   });
 });
+

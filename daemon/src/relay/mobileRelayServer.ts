@@ -1108,9 +1108,10 @@ export class MobileRelayServer {
           networkWatchdog: true,
           consensusEngine: Boolean(consensus),
           benchmarkProfiler: true,
+          deadlockWatchdog: true,
         },
         metrics: {
-          totalTestSuites: 60,
+          totalTestSuites: 70,
           registeredAgentCount: roster.listRegisteredAgentIds().length,
         },
       };
@@ -1414,6 +1415,47 @@ export class MobileRelayServer {
           const deleted = this.engine.getCheckpointManager().deleteCheckpoint(parsed.id);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: deleted, deletedId: parsed.id }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && cleanPath === '/api/deadlock') {
+      const parsedUrl = new URL(req.url ?? '/api/deadlock', 'http://localhost');
+      const taskId = parsedUrl.searchParams.get('taskId');
+      const watchdog = this.engine.getDeadlockWatchdog();
+
+      if (taskId) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(watchdog.inspect(taskId)));
+      } else {
+        const taskIds = watchdog.getTrackedTaskIds();
+        const inspections = taskIds.map((id) => watchdog.inspect(id));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ count: inspections.length, inspections }));
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && cleanPath === '/api/deadlock/check') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf-8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { taskId?: string };
+          if (!parsed.taskId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Task ID is required' }));
+            return;
+          }
+          const inspection = this.engine.getDeadlockWatchdog().inspect(parsed.taskId);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(inspection));
         } catch (err) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON payload' }));

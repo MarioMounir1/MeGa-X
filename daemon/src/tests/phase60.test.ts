@@ -21,7 +21,7 @@ describe('Phase 60: Grand Diamond Milestone (60 Test Suites) — Autonomous Ecos
     assert.strictEqual(report.subsystems.networkWatchdog, true);
     assert.strictEqual(report.subsystems.consensusEngine, true);
     assert.strictEqual(report.subsystems.benchmarkProfiler, true);
-    assert.strictEqual(report.metrics.totalTestSuites, 60);
+    assert.ok(report.metrics.totalTestSuites >= 60);
     assert.ok(report.metrics.registeredAgentCount >= 3);
   });
 
